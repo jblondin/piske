@@ -1,0 +1,143 @@
+use ast::*;
+use sindra::Node;
+use sindra::float::float_ext;
+use sindra::int::int_ext;
+use sindra::string::{match_str_ext, convert_string};
+use regex::Regex;
+
+#[pub]
+program -> Node<Program<Annotation>, Annotation>
+    = b:block { Node::new(Program(b)) }
+
+#[pub]
+block -> Node<Block<Annotation>, Annotation>
+    = vec:(ws stmt:statement ws { stmt })* { Node::new(Block(vec)) }
+
+#[pub]
+statement -> Node<Statement<Annotation>, Annotation>
+    = declare_statement
+    / assign_statement
+    / expr:expression ws ";"? ws { Node::new(Statement::Expression(expr)) }
+
+declare_statement -> Node<Statement<Annotation>, Annotation>
+    = kw_let ident:identifier ws "=" expr:expression ws (";" ws)? {
+        Node::new(Statement::Declare(ident, expr))
+    }
+
+assign_statement -> Node<Statement<Annotation>, Annotation>
+    = ident:identifier  ws "=" expr:expression ws (";" ws)? {
+        Node::new(Statement::Assign(ident, expr))
+    }
+
+//global_statement -> Statement
+//    = kw_global ws id:identifier ws "(" ws expr:expression ws ")" ws (";" ws)? {
+//        Statement::GlobalSet(id, expr)
+//    }
+
+keyword<k> = k !@"\p{XID_Continue}"@ ws
+kw_let = keyword<"let">
+kw_global = keyword<"set">
+
+kw = kw_let / kw_global;
+
+#[pub]
+arith_expression -> Node<Expression<Annotation>, Annotation>
+    = infix_arith
+    / signed_or_unsigned_primary
+
+#[pub]
+expression -> Node<Expression<Annotation>, Annotation>
+    = arith_expression
+    / lit:literal { Node::new(Expression::Literal(lit)) }
+    / "{" ws b:block ws "}" { Node::new(Expression::Block(b)) }
+
+atom -> Node<Expression<Annotation>, Annotation>
+    = ws n:num ws { Node::new(Expression::Literal(n)) }
+    / ws i:identifier ws { Node::new(Expression::Identifier(i)) }
+    / ws g:grouped_arith ws { g }
+
+conjugated_atom -> Node<Expression<Annotation>, Annotation>
+    = a:atom ws "`" {
+        Node::new(Expression::Postfix { op: PostfixOp::Conjugate, left: Box::new(a) })
+    }
+
+primary -> Node<Expression<Annotation>, Annotation>
+    = ws c:conjugated_atom ws { c }
+    / ws a:atom ws { a }
+
+signed_primary -> Node<Expression<Annotation>, Annotation>
+    = ws "+" p:primary {
+        Node::new(Expression::Prefix { op: PrefixOp::UnaryPlus, right: Box::new(p) })
+     }
+    / ws "-" p:primary {
+        Node::new(Expression::Prefix { op: PrefixOp::UnaryMinus, right: Box::new(p) })
+    }
+
+signed_or_unsigned_primary -> Node<Expression<Annotation>, Annotation>
+    = primary
+    / signed_primary
+
+grouped_arith -> Node<Expression<Annotation>, Annotation>
+    = "(" expr:arith_expression ")" { expr }
+
+infix_arith -> Node<Expression<Annotation>, Annotation> = #infix<signed_or_unsigned_primary> {
+    #L l "+" r {
+        Node::new(Expression::Infix { op: InfixOp::Add, left: Box::new(l), right: Box::new(r) })
+    }
+       l "-" r {
+        Node::new(Expression::Infix { op: InfixOp::Subtract, left: Box::new(l), right: Box::new(r) })
+    }
+    #L l "*" r {
+        Node::new(Expression::Infix { op: InfixOp::Multiply, left: Box::new(l), right: Box::new(r) })
+    }
+       l "/" r {
+        Node::new(Expression::Infix { op: InfixOp::Divide, left: Box::new(l), right: Box::new(r) })
+    }
+    #R l "^" r {
+        Node::new(Expression::Infix { op: InfixOp::Power, left: Box::new(l), right: Box::new(r) })
+    }
+}
+
+ws = #quiet<(ws_char / eol / comment)*>
+
+eol
+    = "\n"
+    / "\r\n"
+    / "\r"
+    / "\u{2028}"
+    / "\u{2029}"
+
+eol_char = [\n\r\u{2028}\u{2029}]
+
+ws_char
+    = [ \t\u{00A0}\u{FEFF}\u{1680}\u{180E}\u{2000}-\u{200A}\u{202F}\u{205F}\u{3000}]
+
+comment
+    = comment_single_line
+    / comment_multi_line
+
+comment_single_line
+    = "//" (!eol_char .)*
+
+comment_multi_line
+    = "/*" (!"*/" .)* "*/"
+
+#[pub]
+literal -> Node<Literal, Annotation>
+    = num
+    / string
+
+num -> Node<Literal, Annotation>
+    = f:#ext<float> { Node::new(Literal::Float(f)) }
+    / i:#ext<int> { Node::new(Literal::Int(i)) }
+
+str -> String
+    = s:#ext<match_str> {? convert_string(s) }
+
+string -> Node<Literal, Annotation>
+    = s:str { Node::new(Literal::String(s)) }
+
+identifier -> Node<Identifier, Annotation>
+    = !kw s:@"\p{XID_Start}\p{XID_Continue}*"@ {
+        Node::new(Identifier(s.get(0).unwrap().as_str().to_string()))
+    }
