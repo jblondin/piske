@@ -1,8 +1,8 @@
 extern crate piske;
 
 use piske::compiler_parse::program;
-use piske::visitor::symbol::{self, SymbolDefineVisitor};
-use piske::visitor::type_visitor::compute_types;
+use piske::visitor::symbol::DefineSymbols;
+use piske::visitor::type_visitor::ComputeTypes;
 
 #[test]
 fn test_compute_types() {
@@ -15,7 +15,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    let mut sym_state = symbol::State::default();
-    ast.define_symbols(&mut sym_state).unwrap();
-    compute_types(&mut ast).unwrap();
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
 }

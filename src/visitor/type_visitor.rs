@@ -33,30 +33,37 @@ impl Default for State {
     }
 }
 
-/// Type computation entry point method. Handles setting up the state and initiating the tree walk.
-pub fn compute_types<A>(program: &mut Node<Program<A>, A>) -> Result
+/// Trait to provide easy entry point method to type computation visitor.
+pub trait ComputeTypes {
+    /// Type computation entry point method. Handles setting up the state and initiating the tree
+    /// walk.
+    fn compute_types(&mut self) -> Result;
+}
+impl<A> ComputeTypes for Node<Program<A>, A>
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::default();
-    let res = program.compute_types(&mut state);
-    state.logger.flush();
-    res
+    fn compute_types(&mut self) -> Result {
+        let mut state = State::default();
+        let res = self.visit(&mut state);
+        state.logger.flush();
+        res
+    }
 }
 
 /// Trait for type computation visitor; implemented for all abstract syntax tree nodes.
 pub trait TypeComputationVisitor {
     /// Infer types, enforce type safety, and compute type promotion for this node, and visit any
     /// children.
-    fn compute_types(&mut self, &mut State) -> Result;
+    fn visit(&mut self, &mut State) -> Result;
 }
 
 impl<A> TypeComputationVisitor for Node<Program<A>, A>
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn compute_types(&mut self, state: &mut State) -> Result {
-        self.item_mut().0.compute_types(state)?;
+    fn visit(&mut self, state: &mut State) -> Result {
+        self.item_mut().0.visit(state)?;
         Ok(())
     }
 }
@@ -65,10 +72,10 @@ impl<A> TypeComputationVisitor for Node<Block<A>, A>
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn compute_types(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
         let mut last_ty: Option<PType> = None;
         for statement in self.item_mut().0.iter_mut() {
-            statement.compute_types(state)?;
+            statement.visit(state)?;
             last_ty = statement.annotation().ty();
         }
         self.annotation_mut().set_type(last_ty);
@@ -80,10 +87,10 @@ impl<A> TypeComputationVisitor for Node<Statement<A>, A>
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn compute_types(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
         let ty = match self.elems_mut() {
             (&mut Statement::Declare(ref ident, ref mut expr), &mut ref mut annotation) => {
-                expr.compute_types(state)?;
+                expr.visit(state)?;
                 let ty = expr.annotation().ty();
                 // update the variable type in scope
                 let ident = ident.item().clone();
@@ -96,7 +103,7 @@ impl<A> TypeComputationVisitor for Node<Statement<A>, A>
                 ty
             },
             (&mut Statement::Assign(ref ident, ref mut expr), &mut ref mut annotation) => {
-                expr.compute_types(state)?;
+                expr.visit(state)?;
                 let ty = expr.annotation().ty();
                 let ident = ident.item().clone();
                 if let Some(ref mut scope) = annotation.scope() {
@@ -138,7 +145,7 @@ impl<A> TypeComputationVisitor for Node<Statement<A>, A>
                 ty
             },
             (&mut Statement::Expression(ref mut expr), &mut ref mut annotation) => {
-                expr.compute_types(state)?;
+                expr.visit(state)?;
                 annotation.ty()
             },
         };
@@ -151,7 +158,7 @@ impl<A> TypeComputationVisitor for Node<Expression<A>, A>
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn compute_types(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
         // borrow the scope
         let scope = match self.annotation().scope() {
             Some(ref s) => Rc::clone(&s),
@@ -180,8 +187,8 @@ impl<A> TypeComputationVisitor for Node<Expression<A>, A>
                 }
             },
             (&mut Expression::Infix { ref mut left, ref mut right, ref op }, _) => {
-                left.compute_types(state)?;
-                right.compute_types(state)?;
+                left.visit(state)?;
+                right.visit(state)?;
                 let tleft = left.annotation().ty().unwrap();
                 let tright = right.annotation().ty().unwrap();
                 match op.infer_result_type(tleft, tright) {
@@ -199,7 +206,7 @@ impl<A> TypeComputationVisitor for Node<Expression<A>, A>
 
             },
             (&mut Expression::Prefix { ref mut right, ref op }, _) => {
-                right.compute_types(state)?;
+                right.visit(state)?;
                 let tright = right.annotation().ty().unwrap();
                 match op.infer_result_type(tright) {
                     Some(result_ty) => {
@@ -214,7 +221,7 @@ impl<A> TypeComputationVisitor for Node<Expression<A>, A>
                 }
             },
             (&mut Expression::Postfix { ref mut left, ref op }, _) => {
-                left.compute_types(state)?;
+                left.visit(state)?;
                 let tleft = left.annotation().ty().unwrap();
                 match op.infer_result_type(tleft) {
                     Some(result_ty) => {
@@ -229,7 +236,7 @@ impl<A> TypeComputationVisitor for Node<Expression<A>, A>
                 }
             },
             (&mut Expression::Block(ref mut block), _) => {
-                block.compute_types(state)?;
+                block.visit(state)?;
                 block.annotation().ty()
             }
         };

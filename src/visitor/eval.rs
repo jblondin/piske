@@ -1,4 +1,4 @@
-//! Evaluator abstract syntax tree visitor.
+//! Evaluation abstract syntax tree visitor.
 //!
 //! This module contains the trait and implementation for walking an annotated abstract syntax tree
 //! and evaluating it. This implementation expects that the symbol table and type computation
@@ -27,54 +27,60 @@ impl Default for State {
     }
 }
 
-/// Evaluator entry point method. Handles setting up the state and initiating the tree walk.
-pub fn eval<A>(program: &mut Node<Program<A>, A>) -> Result
+/// Trait to provide easy entry point method to evaluation visitor.
+pub trait Evaluate {
+    /// Evaluate entry point method. Handles setting up the state and initiating the tree walk.
+    fn eval(&mut self) -> Result;
+}
+impl<A> Evaluate for  Node<Program<A>, A>
         where A: Default + Scoped + Typed<PType>,
               A::Scope: MemoryStore<Value>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::default();
-    let res = program.eval(&mut state);
-    res
-}
-
-/// Trait for evaluation visitor; implemented for all abstract syntax tree nodes.
-pub trait Evaluator {
-    /// Walk the tree, evaluating and producing a result from the program.
-    fn eval(&mut self, &mut State) -> Result;
-}
-
-impl<A> Evaluator for Node<Program<A>, A>
-        where A: Default + Scoped + Typed<PType>,
-              A::Scope: MemoryStore<Value>,
-              Rc<RefCell<A::Scope>>: Stack {
-    fn eval(&mut self, state: &mut State) -> Result {
-        self.item_mut().0.eval(state)
+    fn eval(&mut self) -> Result {
+        let mut state = State::default();
+        let res = self.visit(&mut state);
+        res
     }
 }
 
-impl<A> Evaluator for Node<Block<A>, A>
+/// Trait for evaluation visitor; implemented for all abstract syntax tree nodes.
+pub trait EvaluateVisitor {
+    /// Walk the tree, evaluating and producing a result from the program.
+    fn visit(&mut self, &mut State) -> Result;
+}
+
+impl<A> EvaluateVisitor for Node<Program<A>, A>
         where A: Default + Scoped + Typed<PType>,
               A::Scope: MemoryStore<Value>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn eval(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
+        self.item_mut().0.visit(state)
+    }
+}
+
+impl<A> EvaluateVisitor for Node<Block<A>, A>
+        where A: Default + Scoped + Typed<PType>,
+              A::Scope: MemoryStore<Value>,
+              Rc<RefCell<A::Scope>>: Stack {
+    fn visit(&mut self, state: &mut State) -> Result {
         let mut last_result: Value = Value::Empty;
         for statement in self.item_mut().0.iter_mut() {
-            last_result = statement.eval(state)?;
+            last_result = statement.visit(state)?;
         }
         Ok(last_result)
     }
 }
 
-impl<A> Evaluator for Node<Statement<A>, A>
+impl<A> EvaluateVisitor for Node<Statement<A>, A>
         where A: Default + Scoped + Typed<PType>,
               A::Scope: MemoryStore<Value>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn eval(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
         match self.elems_mut() {
             (&mut Statement::Declare(ref ident, ref mut expr), &mut ref mut annotation) => {
                 match annotation.scope() {
                     Some(ref mut scope) => {
-                        let value = expr.eval(state)?;
+                        let value = expr.visit(state)?;
                         scope.borrow_mut().set(ident.item().clone(), value.clone())?;
                         Ok(value)
                     },
@@ -84,7 +90,7 @@ impl<A> Evaluator for Node<Statement<A>, A>
             (&mut Statement::Assign(ref ident, ref mut expr), &mut ref mut annotation) => {
                 match annotation.scope() {
                     Some(ref mut scope) => {
-                        let value = expr.eval(state)?;
+                        let value = expr.visit(state)?;
                         scope.borrow_mut().set(ident.item().clone(), value.clone())?;
                         Ok(value)
                     },
@@ -92,17 +98,17 @@ impl<A> Evaluator for Node<Statement<A>, A>
                 }
             },
             (&mut Statement::Expression(ref mut expr), _) => {
-                expr.eval(state)
+                expr.visit(state)
             }
         }
     }
 }
 
-impl<A> Evaluator for Node<Expression<A>, A>
+impl<A> EvaluateVisitor for Node<Expression<A>, A>
         where A: Default + Scoped + Typed<PType>,
               A::Scope: MemoryStore<Value>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn eval(&mut self, state: &mut State) -> Result {
+    fn visit(&mut self, state: &mut State) -> Result {
         match self.elems_mut() {
             (&mut Expression::Literal(ref literal), _) => {
                 Ok(Value::from(literal.item().clone()))
@@ -121,8 +127,8 @@ impl<A> Evaluator for Node<Expression<A>, A>
             },
             (&mut Expression::Infix { ref op, ref mut left, ref mut right },
                     &mut ref mut annotation) => {
-                let lval = left.eval(state)?;
-                let rval = right.eval(state)?;
+                let lval = left.visit(state)?;
+                let rval = right.visit(state)?;
 
                 op.op(
                     annotation.ty().unwrap(),
@@ -131,7 +137,7 @@ impl<A> Evaluator for Node<Expression<A>, A>
                 )
             },
             (&mut Expression::Prefix { ref op, ref mut right }, &mut ref mut annotation) => {
-                let rval = right.eval(state)?;
+                let rval = right.visit(state)?;
 
                 op.op(
                     annotation.ty().unwrap(),
@@ -139,7 +145,7 @@ impl<A> Evaluator for Node<Expression<A>, A>
                 )
             },
             (&mut Expression::Postfix { ref op, ref mut left }, &mut ref mut annotation) => {
-                let lval = left.eval(state)?;
+                let lval = left.visit(state)?;
 
                 op.op(
                     annotation.ty().unwrap(),
@@ -147,7 +153,7 @@ impl<A> Evaluator for Node<Expression<A>, A>
                 )
             },
             (&mut Expression::Block(ref mut block), _) => {
-                block.eval(state)
+                block.visit(state)
             }
         }
     }

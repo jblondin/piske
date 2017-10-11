@@ -1,7 +1,7 @@
 extern crate piske;
 
 use piske::compiler_parse::program;
-use piske::visitor::symbol::{State, SymbolDefineVisitor};
+use piske::visitor::symbol::DefineSymbols;
 
 #[test]
 fn test_symbol_define() {
@@ -13,7 +13,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    let mut state = State::default();
-    ast.define_symbols(&mut state).unwrap();
+    ast.define_symbols().unwrap();
     println!("{:?}", ast);
 }

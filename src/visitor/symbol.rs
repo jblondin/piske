@@ -32,29 +32,36 @@ impl<Sc: Default> Default for State<Sc> {
 
 type Result = ::std::result::Result<(), String>;
 
-/// Symbol definition entry point method. Handles setting up the state and initiating the tree walk.
-pub fn define_symbols<A>(program: &mut Node<Program<A>, A>) -> Result
+/// Trait to provide easy entry point method to symbol definition visitor.
+pub trait DefineSymbols {
+    /// Symbol definition entry point method. Handles setting up the state and initiating the tree
+    /// walk.
+    fn define_symbols(&mut self) -> Result;
+}
+impl<A> DefineSymbols for Node<Program<A>, A>
         where A: Default + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::default();
-    let res = program.define_symbols(&mut state);
-    res
+    fn define_symbols(&mut self) -> Result {
+        let mut state = State::default();
+        let res = self.visit(&mut state);
+        res
+    }
 }
 
 /// Trait for symbol definition visitor; implemented for all abstract syntax tree nodes.
 pub trait SymbolDefineVisitor<Sc> {
     /// Verify and populate symbol table symbols for this node, and visit any children.
-    fn define_symbols(&mut self, &mut State<Sc>) -> Result;
+    fn visit(&mut self, &mut State<Sc>) -> Result;
 }
 
 impl<A> SymbolDefineVisitor<A::Scope> for Node<Program<A>, A>
         where A: Default + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn define_symbols(&mut self, state: &mut State<A::Scope>) -> Result {
+    fn visit(&mut self, state: &mut State<A::Scope>) -> Result {
         state.scope = state.scope.push();
-        self.item_mut().0.define_symbols(state)?;
+        self.item_mut().0.visit(state)?;
         match state.scope.pop() {
             Some(parent_scope) => { state.scope = parent_scope; }
             None => {
@@ -70,9 +77,9 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Block<A>, A>
         where A: Default + Scoped,
         A::Scope: SymbolStore<Symbol<PType>>,
         Rc<RefCell<A::Scope>>: Stack {
-    fn define_symbols(&mut self, state: &mut State<A::Scope>) -> Result {
+    fn visit(&mut self, state: &mut State<A::Scope>) -> Result {
         for statement in self.item_mut().0.iter_mut() {
-            statement.define_symbols(state)?;
+            statement.visit(state)?;
         }
         Ok(())
     }
@@ -82,17 +89,17 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Statement<A>, A>
         where A: Default + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn define_symbols(&mut self, state: &mut State<A::Scope>) -> Result {
+    fn visit(&mut self, state: &mut State<A::Scope>) -> Result {
         self.annotation_mut().set_scope(Some(Rc::clone(&state.scope)));
         match *self.item_mut() {
             Statement::Declare(ref id, ref mut expr) => {
-                expr.define_symbols(state)?;
+                expr.visit(state)?;
                 state.scope.borrow_mut().define(id.item().clone(),
                     Symbol::Variable(id.item().clone(), None));
                 Ok(())
             },
             Statement::Assign(ref id, ref mut expr) => {
-                expr.define_symbols(state)?;
+                expr.visit(state)?;
                 match state.scope.borrow().resolve(id.item()) {
                     Some(_) => Ok(()),
                     None => {
@@ -103,7 +110,7 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Statement<A>, A>
                 }
             },
             Statement::Expression(ref mut expr) => {
-                expr.define_symbols(state)
+                expr.visit(state)
             },
         }
     }
@@ -113,7 +120,7 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Expression<A>, A>
         where A: Default + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    fn define_symbols(&mut self, state: &mut State<A::Scope>) -> Result {
+    fn visit(&mut self, state: &mut State<A::Scope>) -> Result {
         self.annotation_mut().set_scope(Some(Rc::clone(&state.scope)));
         match *self.item_mut() {
             Expression::Literal(_) => {
@@ -130,21 +137,21 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Expression<A>, A>
                 }
             },
             Expression::Infix { ref mut left, ref mut right, .. } => {
-                left.define_symbols(state)?;
-                right.define_symbols(state)?;
+                left.visit(state)?;
+                right.visit(state)?;
                 Ok(())
             },
             Expression::Prefix { ref mut right, .. } => {
-                right.define_symbols(state)?;
+                right.visit(state)?;
                 Ok(())
             },
             Expression::Postfix { ref mut left, .. } => {
-                left.define_symbols(state)?;
+                left.visit(state)?;
                 Ok(())
             },
             Expression::Block(ref mut block) => {
                 state.scope = state.scope.push();
-                block.define_symbols(state)?;
+                block.visit(state)?;
                 match state.scope.pop() {
                     Some(parent_scope) => { state.scope = parent_scope; }
                     None => {
