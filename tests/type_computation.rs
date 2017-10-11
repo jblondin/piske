@@ -15,7 +15,7 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    let mut sym_state = symbol::State::new();
+    let mut sym_state = symbol::State::default();
     ast.define_symbols(&mut sym_state).unwrap();
     compute_types(&mut ast).unwrap();
 }

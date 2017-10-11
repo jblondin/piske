@@ -13,7 +13,7 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    let mut state = State::new();
+    let mut state = State::default();
     ast.define_symbols(&mut state).unwrap();
     println!("{:?}", ast);
 }

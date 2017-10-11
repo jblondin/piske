@@ -25,9 +25,8 @@ pub struct State {
     /// Logger
     pub logger: LogListener<String, io::Stdout, io::Stderr>
 }
-impl State {
-    /// Create a new state.
-    pub fn new() -> State {
+impl Default for State {
+    fn default() -> State {
         State {
             logger: LogListener::new(io::stdout(), io::stderr()),
         }
@@ -39,7 +38,7 @@ pub fn compute_types<A>(program: &mut Node<Program<A>, A>) -> Result
         where A: Default + Typed<PType> + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::new();
+    let mut state = State::default();
     let res = program.compute_types(&mut state);
     state.logger.flush();
     res

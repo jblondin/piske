@@ -4,13 +4,11 @@
 //! and evaluating it. This implementation expects that the symbol table and type computation
 //! annotations already exist on the tree.
 
-use std::io;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use sindra::Node;
 use sindra::Typed;
-use sindra::log::LogListener;
 use sindra::scope::{Scoped, MemoryStore, Stack};
 use sindra::operator::{UnaryOperator, BinaryOperator};
 use sindra::value::Coerce;
@@ -18,20 +16,14 @@ use sindra::value::Coerce;
 use ast::*;
 use value::Value;
 
-
 type Result = ::std::result::Result<Value, String>;
 
-/// State carried throughout the tree walker. Contains logger.
+/// State carried throughout the tree walker. Currently contains nothing; exists for furutre use.
 pub struct State {
-    /// Logger
-    pub logger: LogListener<String, io::Stdout, io::Stderr>,
 }
-impl State {
-    /// Create a new state.
-    pub fn new() -> State {
-        State {
-            logger: LogListener::new(io::stdout(), io::stderr()),
-        }
+impl Default for State {
+    fn default() -> State {
+        State {}
     }
 }
 
@@ -40,9 +32,8 @@ pub fn eval<A>(program: &mut Node<Program<A>, A>) -> Result
         where A: Default + Scoped + Typed<PType>,
               A::Scope: MemoryStore<Value>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::new();
+    let mut state = State::default();
     let res = program.eval(&mut state);
-    state.logger.flush();
     res
 }
 

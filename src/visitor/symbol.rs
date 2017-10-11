@@ -5,9 +5,11 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::io;
 
 use sindra::{Symbol, Node};
 use sindra::scope::{Scoped, Stack, SymbolStore};
+use sindra::log::LogListener;
 
 use ast::PType;
 use ast::ast::*;
@@ -16,13 +18,14 @@ use ast::ast::*;
 pub struct State<Sc> {
     /// Reference to the current scope stack.
     pub scope: Rc<RefCell<Sc>>,
-    //TODO: add log listener
+    /// Logger
+    pub logger: LogListener<String, io::Stdout, io::Stderr>,
 }
-impl<Sc: Default> State<Sc> {
-    /// Create a new state using the default `Sc` scope constructor.
-    pub fn new() -> State<Sc> {
+impl<Sc: Default> Default for State<Sc> {
+    fn default() -> State<Sc> {
         State {
-            scope: Rc::new(RefCell::new(Sc::default()))
+            scope: Rc::new(RefCell::new(Sc::default())),
+            logger: LogListener::new(io::stdout(), io::stderr()),
         }
     }
 }
@@ -34,7 +37,7 @@ pub fn define_symbols<A>(program: &mut Node<Program<A>, A>) -> Result
         where A: Default + Scoped,
               A::Scope: SymbolStore<Symbol<PType>>,
               Rc<RefCell<A::Scope>>: Stack {
-    let mut state = State::new();
+    let mut state = State::default();
     let res = program.define_symbols(&mut state);
     res
 }
@@ -92,7 +95,11 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Statement<A>, A>
                 expr.define_symbols(state)?;
                 match state.scope.borrow().resolve(id.item()) {
                     Some(_) => Ok(()),
-                    None => Err(format!("symbol {} does not exist in scope", id.item()))
+                    None => {
+                        state.logger.error(format!("symbol {} does not exist in scope",
+                            id.item()));
+                        Ok(())
+                    }
                 }
             },
             Statement::Expression(ref mut expr) => {
@@ -115,7 +122,11 @@ impl<A> SymbolDefineVisitor<A::Scope> for Node<Expression<A>, A>
             Expression::Identifier(ref id) => {
                 match state.scope.borrow().resolve(id.item()) {
                     Some(_) => Ok(()),
-                    None => Err(format!("symbol {} does not exist in scope", id.item()))
+                    None => {
+                        state.logger.error(format!("symbol {} does not exist in scope",
+                            id.item()));
+                        Ok(())
+                    }
                 }
             },
             Expression::Infix { ref mut left, ref mut right, .. } => {
