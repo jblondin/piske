@@ -1,6 +1,6 @@
 extern crate piske;
 
-use piske::compiler_parse::program;
+use piske::parse::program;
 use piske::visitor::symbol::DefineSymbols;
 use piske::visitor::type_visitor::ComputeTypes;
 
@@ -15,6 +15,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
+    ast.borrow_mut().define_symbols().unwrap();
+    ast.borrow_mut().compute_types().unwrap();
 }

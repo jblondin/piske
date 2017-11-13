@@ -2,6 +2,7 @@
 
 use sindra::inference::{InferResultBinary, InferResultUnary, InferPromotion};
 use ast::*;
+use PType;
 
 lazy_static! {
     /// Result type definition for all arithmetic infix operations. `Some(...)` indicates that the

@@ -2,7 +2,8 @@
 
 use sindra::operator::{BinaryOperator, UnaryOperator};
 use value::Value;
-use ast::{PType, InfixOp, PrefixOp, PostfixOp};
+use ast::{InfixOp, PrefixOp, PostfixOp};
+use PType;
 
 impl BinaryOperator<PType, Value> for InfixOp {
     fn op(&self, ty: PType, left: &Value, right: &Value) -> Result<Value, String> {

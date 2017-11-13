@@ -4,61 +4,98 @@
 //! This abstract syntax tree is constructed by the rust-peg parser, and annotated by the AST
 //! visitors.
 
-use sindra::{Identifier, Node};
+use sindra::{Identifier, PNode};
+use ast::Annotation;
 
 /// Root-level program. Only contains a statement block.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program<A: Default>(pub Node<Block<A>, A>);
+pub struct Program(pub PNode<Block>);
+annotate!(Program, Annotation);
 
 /// Statement block is simply a list of statements.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Block<A: Default>(pub Vec<Node<Statement<A>, A>>);
+pub struct Block(pub Vec<PNode<Statement>>);
+annotate!(Block, Annotation);
 
 /// The various allowed statements in the piske programming language.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<A: Default> {
+pub enum Statement {
     /// Statement only containing an expression.
-    Expression(Node<Expression<A>, A>),
+    Expression(PNode<Expression>),
     /// Variable declaration statement.
-    Declare(Node<Identifier, A>, Node<Expression<A>, A>),
-    /// Variable assignment statement
-    Assign(Node<Identifier, A>, Node<Expression<A>, A>),
+    Declare(PNode<Identifier>, PNode<Expression>),
+    /// Variable assignment statement.
+    Assign(PNode<Identifier>, PNode<Expression>),
+    /// Function definition statement.
+    FnDefine(FunctionDef),
     // GlobalSet(Identifier, Expression)
 }
+annotate!(Statement, Annotation);
+
+/// Definition of a function.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionDef {
+    /// Function name.
+    pub name: PNode<Identifier>,
+    /// Return type.
+    pub ret_type: PNode<Identifier>,
+    /// List of function parameters.
+    pub params: Vec<PNode<Parameter>>,
+    /// Body of the function.
+    pub body: PNode<Block>,
+}
+
+/// Function parameter (used in function definitions).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Parameter {
+    /// Paramter variable name.
+    pub name: PNode<Identifier>,
+    /// Parameter variable type.
+    pub ty: PNode<Identifier>,
+}
+annotate!(Parameter);
 
 /// Valid expressions in the piske programming language.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression<A: Default> {
+pub enum Expression {
     /// A sole literal
-    Literal(Node<Literal, A>),
+    Literal(PNode<Literal>),
     /// An identifier
-    Identifier(Node<Identifier, A>),
+    Identifier(PNode<Identifier>),
     /// An infix operation, of form <expr> <op> <expr>
     Infix {
         /// The specific type of infix operation (e.g. add, subtract)
         op: InfixOp,
         /// The left operand
-        left: Box<Node<Expression<A>, A>>,
+        left: Box<PNode<Expression>>,
         /// The right operand
-        right: Box<Node<Expression<A>, A>>,
+        right: Box<PNode<Expression>>,
     },
     /// A prefix operation, of form <op> <expr>
     Prefix {
         /// The specific type of prefix operation (e.g. negation)
         op: PrefixOp,
         /// The operand
-        right: Box<Node<Expression<A>, A>>,
+        right: Box<PNode<Expression>>,
     },
     /// A postfix operation, of form <expr> <op>
     Postfix {
         /// The specific type of postfix operation
         op: PostfixOp,
         /// The operand
-        left: Box<Node<Expression<A>, A>>,
+        left: Box<PNode<Expression>>,
     },
     /// A block of statements is treated as an expression
-    Block(Node<Block<A>, A>),
+    Block(PNode<Block>),
+    /// A function call
+    FnCall {
+        /// Function name.
+        name: PNode<Identifier>,
+        /// List of arguments passed into the function.
+        args: Vec<PNode<Expression>>
+    }
 }
+annotate!(Expression, Annotation);
 
 /// Supported literals
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +107,7 @@ pub enum Literal {
     /// Integer literal
     Int(i64),
 }
+annotate!(Literal);
 
 /// Valid prefix operations
 #[derive(Debug, Copy, Clone, PartialEq)]

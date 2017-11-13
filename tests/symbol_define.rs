@@ -1,6 +1,6 @@
 extern crate piske;
 
-use piske::compiler_parse::program;
+use piske::parse::program;
 use piske::visitor::symbol::DefineSymbols;
 
 #[test]
@@ -13,6 +13,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
+    ast.borrow_mut().define_symbols().unwrap();
     println!("{:?}", ast);
 }

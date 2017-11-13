@@ -5,7 +5,8 @@ use std::fmt;
 use sindra;
 use sindra::value::{Coerce, Cast};
 
-use ast::{PType, Literal};
+use ast::Literal;
+use PType;
 
 /// Value type for run-time memory values.
 #[derive(Debug, Clone, PartialEq)]

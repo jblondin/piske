@@ -4,7 +4,7 @@ use sindra::Type;
 use std::fmt;
 
 /// The types available in the piske programming language. Implements the sindra `Type` trait.
-#[derive(Copy, Debug, Clone, PartialEq)]
+#[derive(Copy, Debug, Clone, Hash, PartialEq)]
 pub enum PType {
     /// Built-in string type
     String,

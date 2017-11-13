@@ -1,50 +1,85 @@
 //! Implementation of Display trait for abstract syntax tree.
 
-use std::fmt;
+use std::fmt::{self, Write};
+
 use ast::*;
 
-impl<A: Default> fmt::Display for Program<A> {
+impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
-        write!(f, "{}", self.0.item())
+        write!(f, "{}", self.0.borrow().item)
     }
 }
 
-impl<A: Default> fmt::Display for Block<A> {
+impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
         write!(f, "\n{{\n")?;
         for statement in &self.0 {
-            write!(f, "{}\n", statement.item())?;
+            write!(f, "{}\n", statement.borrow().item)?;
         }
         write!(f, "}}")?;
         Ok(())
     }
 }
 
-impl<A: Default> fmt::Display for Statement<A> {
+impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
         match *self {
-            Statement::Expression(ref expr) => write!(f, "expr:{}", expr.item()),
-            Statement::Declare(ref ident, ref expr) => write!(f, "decl({}->{})", ident.item(),
-                expr.item()),
-            Statement::Assign(ref ident, ref expr) => write!(f, "assign({}->{})", ident.item(),
-                expr.item()),
+            Statement::Expression(ref expr) => write!(f, "expr:{}", expr.borrow().item),
+            Statement::Declare(ref ident, ref expr) => write!(f, "decl({}->{})",
+                ident.borrow().item, expr.borrow().item),
+            Statement::Assign(ref ident, ref expr) => write!(f, "assign({}->{})",
+                ident.borrow().item, expr.borrow().item),
+            Statement::FnDefine(FunctionDef { ref name, ref body, ref params, ref ret_type }) => {
+            // Statement::FnDefine { ref name, ref ret_type, ref params, ref body } => {
+                let mut pl = String::new();
+                let mut first = true;
+                for expr in params {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(&mut pl, ",")?;
+                    }
+                    write!(&mut pl, "{}", expr.borrow().item)?;
+                }
+                write!(f, "def({}({}) -> {}) {}", name.borrow().item, pl, ret_type.borrow().item,
+                    body.borrow().item)
+            }
         }
     }
 }
 
-impl<A: Default> fmt::Display for Expression<A> {
+impl fmt::Display for Parameter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
+        write!(f, "{}: {}", self.name.borrow().item, self.ty.borrow().item)
+    }
+}
+
+impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
         match *self {
-            Expression::Literal(ref lit) => write!(f, "lit:{}", lit.item()),
-            Expression::Identifier(ref ident) => write!(f, "ident:{}", ident.item()),
+            Expression::Literal(ref lit) => write!(f, "lit:{}", lit.borrow().item),
+            Expression::Identifier(ref ident) => write!(f, "ident:{}", ident.borrow().item),
             Expression::Infix { ref op, ref left, ref right } =>
-                write!(f, "infix:{}{}{}", left.item(), op, right.item()),
+                write!(f, "infix:{}{}{}", left.borrow().item, op, right.borrow().item),
             Expression::Prefix { ref op, ref right } =>
-                write!(f, "prefix:{}{}", op, right.item()),
+                write!(f, "prefix:{}{}", op, right.borrow().item),
             Expression::Postfix { ref op, ref left } =>
-                write!(f, "postfix:{}{}", left.item(), op),
+                write!(f, "postfix:{}{}", left.borrow().item, op),
             Expression::Block(ref block) =>
-                write!(f, "block:{}", block.item())
+                write!(f, "block:{}", block.borrow().item),
+            Expression::FnCall { name: ref ident, ref args } => {
+                let mut pl = String::new();
+                let mut first = true;
+                for expr in args {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(&mut pl, ",")?;
+                    }
+                    write!(&mut pl, "{}", expr.borrow().item)?;
+                }
+                write!(f, "fn{{{}}}({})", ident.borrow().item, pl)
+            }
         }
     }
 }

@@ -4,3 +4,10 @@
 pub mod eval;
 pub mod symbol;
 pub mod type_visitor;
+
+pub mod state;
+pub use self::state::State;
+
+// pub trait Visitor<Sc> {
+//     fn visit(&mut self, state: &mut State<Sc>) -> Result;
+// }

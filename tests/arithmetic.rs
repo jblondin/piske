@@ -1,9 +1,9 @@
 extern crate piske;
 extern crate sindra;
 
-use sindra::Node;
+use sindra::PNode;
 
-use piske::interp_parse::{expression};
+use piske::parse::{expression};
 use piske::ast::ast::*;
 
 include!("macros.rs");
