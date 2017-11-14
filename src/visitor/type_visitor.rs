@@ -24,10 +24,10 @@ type Result = ::std::result::Result<(), String>;
 pub trait ComputeTypes {
     /// Type computation entry point method. Handles setting up the state and initiating the tree
     /// walk.
-    fn compute_types(&mut self) -> Result;
+    fn compute_types(&self) -> Result;
 }
 impl ComputeTypes for Node<Program> {
-    fn compute_types(&mut self) -> Result {
+    fn compute_types(&self) -> Result {
         let mut state = State::default();
         let res = self.visit(&mut state);
         state.logger.flush();
@@ -39,20 +39,20 @@ impl ComputeTypes for Node<Program> {
 pub trait TypeComputationVisitor {
     /// Infer types, enforce type safety, and compute type promotion for this node, and visit any
     /// children.
-    fn visit(&mut self, &mut State) -> Result;
+    fn visit(&self, &mut State) -> Result;
 }
 
 impl TypeComputationVisitor for Node<Program> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         self.item.0.visit(state)?;
         Ok(())
     }
 }
 
 impl TypeComputationVisitor for Node<Block> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         let mut last_ty: Option<PType> = None;
-        for statement in self.item.0.iter_mut() {
+        for statement in self.item.0.iter() {
             statement.visit(state)?;
             last_ty = statement.annotation.borrow_mut().ty();
         }
@@ -62,9 +62,9 @@ impl TypeComputationVisitor for Node<Block> {
 }
 
 impl TypeComputationVisitor for Node<Statement> {
-    fn visit(&mut self, state: &mut State) -> Result {
-        let ty = match (&mut self.item, &mut self.annotation) {
-            (&mut Statement::Declare(ref ident, ref mut expr), &mut ref mut annotation) => {
+    fn visit(&self, state: &mut State) -> Result {
+        let ty = match (&self.item, &self.annotation) {
+            (&Statement::Declare(ref ident, ref expr), &ref annotation) => {
                 expr.visit(state)?;
                 let ty = expr.annotation.borrow().ty();
                 // update the variable type in scope
@@ -77,7 +77,7 @@ impl TypeComputationVisitor for Node<Statement> {
                 }
                 ty
             },
-            (&mut Statement::Assign(ref ident, ref mut expr), &mut ref mut annotation) => {
+            (&Statement::Assign(ref ident, ref expr), &ref annotation) => {
                 expr.visit(state)?;
                 let expr_ty = expr.annotation.borrow().ty();
                 let ident = ident.item.clone();
@@ -124,12 +124,12 @@ impl TypeComputationVisitor for Node<Statement> {
                 }
                 Some(expr_ty)
             },
-            (&mut Statement::Expression(ref mut expr), _) => {
+            (&Statement::Expression(ref expr), _) => {
                 expr.visit(state)?;
                 expr.annotation.borrow().ty()
             },
-            (&mut Statement::FnDefine(FunctionDef { ref name, ref mut body, ref ret_type,
-                    ref params }), &mut ref mut annotation) => {
+            (&Statement::FnDefine(FunctionDef { ref name, ref body, ref ret_type,
+                    ref params }), &ref annotation) => {
                 for param in params.iter() {
                     let param_name = param.item.name.item.clone();
                     let param_ty = param.item.ty.item.clone();
@@ -235,7 +235,7 @@ impl TypeComputationVisitor for Node<Statement> {
 }
 
 impl TypeComputationVisitor for Node<Expression> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         // borrow the scope
         let scope = match self.annotation.borrow().scope() {
             Some(ref s) => Rc::clone(&s),
@@ -244,15 +244,15 @@ impl TypeComputationVisitor for Node<Expression> {
             }
         };
 
-        let ty = match (&mut self.item, &mut self.annotation) {
-            (&mut Expression::Literal(ref node), _) => {
+        let ty = match (&self.item, &self.annotation) {
+            (&Expression::Literal(ref node), _) => {
                 match node.item {
                     Literal::String(_) => { Some(PType::String) },
                     Literal::Float(_) => { Some(PType::Float) },
                     Literal::Int(_) => { Some(PType::Int) }
                 }
             },
-            (&mut Expression::Identifier(ref node), _) => {
+            (&Expression::Identifier(ref node), _) => {
                 match scope.borrow().resolve(&node.item) {
                     Some(ref sym) => {
                         match *sym {
@@ -264,7 +264,7 @@ impl TypeComputationVisitor for Node<Expression> {
                     None => None
                 }
             },
-            (&mut Expression::Infix { ref mut left, ref mut right, ref op }, _) => {
+            (&Expression::Infix { ref left, ref right, ref op }, _) => {
                 left.visit(state)?;
                 right.visit(state)?;
                 let tleft = left.annotation.borrow().ty().unwrap();
@@ -283,7 +283,7 @@ impl TypeComputationVisitor for Node<Expression> {
                 }
 
             },
-            (&mut Expression::Prefix { ref mut right, ref op }, _) => {
+            (&Expression::Prefix { ref right, ref op }, _) => {
                 right.visit(state)?;
                 let tright = right.annotation.borrow().ty().unwrap();
                 match op.infer_result_type(tright) {
@@ -299,7 +299,7 @@ impl TypeComputationVisitor for Node<Expression> {
                     }
                 }
             },
-            (&mut Expression::Postfix { ref mut left, ref op }, _) => {
+            (&Expression::Postfix { ref left, ref op }, _) => {
                 left.visit(state)?;
                 let tleft = left.annotation.borrow().ty().unwrap();
                 match op.infer_result_type(tleft) {
@@ -315,12 +315,12 @@ impl TypeComputationVisitor for Node<Expression> {
                     }
                 }
             },
-            (&mut Expression::Block(ref mut block), _) => {
+            (&Expression::Block(ref block), _) => {
                 block.visit(state)?;
                 block.annotation.borrow().ty()
             },
-            (&mut Expression::FnCall { name: ref ident, ref mut args }, _) => {
-                for ref mut arg in args.iter_mut() {
+            (&Expression::FnCall { name: ref ident, ref args }, _) => {
+                for ref mut arg in args.iter() {
                     arg.visit(state)?;
                 }
                 let id = &ident.item;

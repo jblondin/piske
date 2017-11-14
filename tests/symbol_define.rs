@@ -12,7 +12,7 @@ a = a + 2;
 a;
     "#;
 
-    let mut ast = program(prog).unwrap();
+    let ast = program(prog).unwrap();
     ast.define_symbols().unwrap();
     println!("{:?}", ast);
 }

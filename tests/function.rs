@@ -17,7 +17,7 @@ let b = 5;
 add5(b)
     "#;
 
-    let mut ast = program(prog).unwrap();
+    let ast = program(prog).unwrap();
     ast.define_symbols().unwrap();
     ast.compute_types().unwrap();
     assert_eq!(ast.eval(), Ok(Value::Int(10)));
@@ -33,7 +33,7 @@ let b = 5.0;
 add(2, b)
     "#;
 
-    let mut ast = program(prog).unwrap();
+    let ast = program(prog).unwrap();
     ast.define_symbols().unwrap();
     ast.compute_types().unwrap();
     assert_eq!(ast.eval(), Ok(Value::Float(7.0)));

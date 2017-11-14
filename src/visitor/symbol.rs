@@ -18,10 +18,10 @@ type Result = ::std::result::Result<(), String>;
 pub trait DefineSymbols {
     /// Symbol definition entry point method. Handles setting up the state and initiating the tree
     /// walk.
-    fn define_symbols(&mut self) -> Result;
+    fn define_symbols(&self) -> Result;
 }
 impl DefineSymbols for Node<Program> {
-    fn define_symbols(&mut self) -> Result {
+    fn define_symbols(&self) -> Result {
         let mut state = State::default();
         let res = self.visit(&mut state);
         res
@@ -31,18 +31,11 @@ impl DefineSymbols for Node<Program> {
 /// Trait for symbol definition visitor; implemented for all abstract syntax tree nodes.
 pub trait SymbolDefineVisitor {
     /// Verify and populate symbol table symbols for this node, and visit any children.
-    fn visit(&mut self, &mut State) -> Result;
+    fn visit(&self, &mut State) -> Result;
 }
 
-
-// impl<T, Sc> Visitor<Sc> for T where T: SymbolDefineVisitor<Sc> {
-//     fn visit(&mut self, state: &mut State<Sc>) -> Result {
-//         self.visit(state)
-//     }
-// }
-
 impl SymbolDefineVisitor for Node<Program> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         // define builtins in top-level (global) scope
         state.define_builtins();
         state.scope = state.scope.push();
@@ -59,8 +52,8 @@ impl SymbolDefineVisitor for Node<Program> {
 }
 
 impl SymbolDefineVisitor for Node<Block> {
-    fn visit(&mut self, state: &mut State) -> Result {
-        for statement in self.item.0.iter_mut() {
+    fn visit(&self, state: &mut State) -> Result {
+        for statement in self.item.0.iter() {
             statement.visit(state)?;
         }
         self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
@@ -69,17 +62,17 @@ impl SymbolDefineVisitor for Node<Block> {
 }
 
 impl SymbolDefineVisitor for Node<Statement> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         match self.item {
-            Statement::Declare(ref id, ref mut expr) => {
+            Statement::Declare(ref id, ref expr) => {
                 expr.visit(state)?;
                 let id = id.item.clone();
                 state.scope.borrow_mut().define(id.clone(),
                     Symbol::variable(id.clone(), None));
                 Ok(())
             },
-            Statement::Assign(ref id, ref mut expr) => {
+            Statement::Assign(ref id, ref expr) => {
                 expr.visit(state)?;
                 let id = id.item.clone();
                 let sym: Option<Symbol> = state.scope.borrow().resolve(&id);
@@ -95,10 +88,10 @@ impl SymbolDefineVisitor for Node<Statement> {
                     }
                 }
             },
-            Statement::Expression(ref mut expr) => {
+            Statement::Expression(ref expr) => {
                 expr.visit(state)
             },
-            Statement::FnDefine(FunctionDef { ref name, ref mut body, ref params, .. }) => {
+            Statement::FnDefine(FunctionDef { ref name, ref body, ref params, .. }) => {
                 // make sure function definition is at top scope
                 let parent = state.scope.peek();
                 if parent.is_some() && Rc::ptr_eq(&parent.unwrap(), &state.global) {
@@ -131,7 +124,7 @@ impl SymbolDefineVisitor for Node<Statement> {
 }
 
 impl SymbolDefineVisitor for Node<Expression> {
-    fn visit(&mut self, state: &mut State) -> Result {
+    fn visit(&self, state: &mut State) -> Result {
         self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         match self.item {
             Expression::Literal(_) => {
@@ -148,20 +141,20 @@ impl SymbolDefineVisitor for Node<Expression> {
                     }
                 }
             },
-            Expression::Infix { ref mut left, ref mut right, .. } => {
+            Expression::Infix { ref left, ref right, .. } => {
                 left.visit(state)?;
                 right.visit(state)?;
                 Ok(())
             },
-            Expression::Prefix { ref mut right, .. } => {
+            Expression::Prefix { ref right, .. } => {
                 right.visit(state)?;
                 Ok(())
             },
-            Expression::Postfix { ref mut left, .. } => {
+            Expression::Postfix { ref left, .. } => {
                 left.visit(state)?;
                 Ok(())
             },
-            Expression::Block(ref mut block) => {
+            Expression::Block(ref block) => {
                 state.scope = state.scope.push();
                 block.visit(state)?;
                 match state.scope.pop() {
@@ -172,8 +165,8 @@ impl SymbolDefineVisitor for Node<Expression> {
                 }
                 Ok(())
             },
-            Expression::FnCall { name: ref ident, ref mut args } => {
-                for ref mut arg in args.iter_mut() {
+            Expression::FnCall { name: ref ident, ref args } => {
+                for ref arg in args.iter() {
                     arg.visit(state)?;
                 }
                 let id = ident.item.clone();
