@@ -3,7 +3,7 @@
 use std::fmt;
 
 use sindra::Identifier;
-use sindra::node::PNode;
+use sindra::node::Node;
 
 use ast::{Block, Parameter};
 use PType;
@@ -34,9 +34,9 @@ pub enum Symbol {
         /// the computation)
         ret_ty: Option<PType>,
         /// Function Body
-        body: PNode<Block>,
+        body: Node<Block>,
         /// Function parameters,
-        params: Vec<PNode<Parameter>>,
+        params: Vec<Node<Parameter>>,
     }
 }
 
@@ -49,8 +49,8 @@ impl Symbol {
         }
     }
     /// Create a function Symbol, with specified type
-    pub fn function(name: Identifier, ty: Option<PType>, body: PNode<Block>,
-            params: Vec<PNode<Parameter>>) -> Symbol {
+    pub fn function(name: Identifier, ty: Option<PType>, body: Node<Block>,
+            params: Vec<Node<Parameter>>) -> Symbol {
         Symbol::Function {
             name: name,
             ret_ty: ty,

@@ -7,7 +7,7 @@
 use std::rc::Rc;
 
 use sindra::Typed;
-use sindra::scope::{Scoped, SymbolStore, MemoryScope};
+use sindra::scope::{Scoped, SymbolStore};
 use sindra::inference::{InferResultBinary, InferResultUnary, InferPromotion};
 
 use ast::ast::*;
@@ -16,11 +16,9 @@ use sindra::Node;
 
 use PType;
 use Symbol;
-use value::Value;
 use visitor::State;
 
 type Result = ::std::result::Result<(), String>;
-type Scope = MemoryScope<Symbol, Value>;
 
 /// Trait to provide easy entry point method to type computation visitor.
 pub trait ComputeTypes {
@@ -46,7 +44,7 @@ pub trait TypeComputationVisitor {
 
 impl TypeComputationVisitor for Node<Program> {
     fn visit(&mut self, state: &mut State) -> Result {
-        self.item.0.borrow_mut().visit(state)?;
+        self.item.0.visit(state)?;
         Ok(())
     }
 }
@@ -55,10 +53,10 @@ impl TypeComputationVisitor for Node<Block> {
     fn visit(&mut self, state: &mut State) -> Result {
         let mut last_ty: Option<PType> = None;
         for statement in self.item.0.iter_mut() {
-            statement.borrow_mut().visit(state)?;
-            last_ty = statement.borrow().annotation.ty();
+            statement.visit(state)?;
+            last_ty = statement.annotation.borrow_mut().ty();
         }
-        self.annotation.set_type(last_ty);
+        self.annotation.borrow_mut().set_type(last_ty);
         Ok(())
     }
 }
@@ -67,11 +65,11 @@ impl TypeComputationVisitor for Node<Statement> {
     fn visit(&mut self, state: &mut State) -> Result {
         let ty = match (&mut self.item, &mut self.annotation) {
             (&mut Statement::Declare(ref ident, ref mut expr), &mut ref mut annotation) => {
-                expr.borrow_mut().visit(state)?;
-                let ty = expr.borrow().annotation.ty();
+                expr.visit(state)?;
+                let ty = expr.annotation.borrow().ty();
                 // update the variable type in scope
-                let ident = ident.borrow().item.clone();
-                if let Some(ref mut scope) = (annotation as &Scoped<Scope>).scope() {
+                let ident = ident.item.clone();
+                if let Some(ref mut scope) = annotation.borrow().scope() {
                     if let Some(ty) = ty {
                         scope.borrow_mut().define(ident.clone(),
                             Symbol::variable(ident.clone(), Some(ty)));
@@ -80,10 +78,10 @@ impl TypeComputationVisitor for Node<Statement> {
                 ty
             },
             (&mut Statement::Assign(ref ident, ref mut expr), &mut ref mut annotation) => {
-                expr.borrow_mut().visit(state)?;
-                let expr_ty = expr.borrow().annotation.ty();
-                let ident = ident.borrow().item.clone();
-                let scope = (annotation as &Scoped<Scope>).scope().ok_or(
+                expr.visit(state)?;
+                let expr_ty = expr.annotation.borrow().ty();
+                let ident = ident.item.clone();
+                let scope = annotation.borrow().scope().ok_or(
                     format!("no scope associated with identifier {}", ident))?;
                 let expr_ty = expr_ty.ok_or(
                     format!("type computation for expression failed in assignment of {}", ident))?;
@@ -95,7 +93,7 @@ impl TypeComputationVisitor for Node<Statement> {
                                 if expr_ty != dest_ty {
                                     match expr_ty.infer_promotion(dest_ty) {
                                         Some(promoted) => {
-                                            annotation.set_promote_type(Some(promoted));
+                                            annotation.borrow_mut().set_promote_type(Some(promoted));
                                         },
                                         None => {
                                             state.logger.error(format!(
@@ -127,21 +125,20 @@ impl TypeComputationVisitor for Node<Statement> {
                 Some(expr_ty)
             },
             (&mut Statement::Expression(ref mut expr), _) => {
-                expr.borrow_mut().visit(state)?;
-                expr.borrow().annotation.ty()
+                expr.visit(state)?;
+                expr.annotation.borrow().ty()
             },
             (&mut Statement::FnDefine(FunctionDef { ref name, ref mut body, ref ret_type,
                     ref params }), &mut ref mut annotation) => {
                 for param in params.iter() {
-                    let param = param.borrow();
-                    let param_name = param.item.name.borrow().item.clone();
-                    let param_ty = param.item.ty.borrow().item.clone();
+                    let param_name = param.item.name.item.clone();
+                    let param_ty = param.item.ty.item.clone();
 
-                    let fn_scope = body.borrow_mut().annotation.scope().unwrap();
+                    let fn_scope = body.annotation.borrow().scope().unwrap();
                     let pm_ty = if let Some(param_ty_sym) = fn_scope.borrow().resolve(&param_ty) {
                         match param_ty_sym {
                             Symbol::Variable { .. } => {
-                                state.logger.error(format!("variable '{}' not valid as type \
+                                state.logger.error(format!("variable '{}'borrow(). not valid as type \
                                     for parameter '{}'", param_ty, param_name));
                                 None
                             },
@@ -163,15 +160,15 @@ impl TypeComputationVisitor for Node<Statement> {
                         Symbol::variable(param_name.clone(), pm_ty));
                 }
 
-                body.borrow_mut().visit(state)?;
-                let body_ty = body.borrow().annotation.ty();
+                body.visit(state)?;
+                let body_ty = body.annotation.borrow_mut().ty();
                 // lookup the declared return type
-                let name = name.borrow().item.clone();
-                let scope = annotation.scope().ok_or(
+                let name = name.item.clone();
+                let scope = annotation.borrow().scope().ok_or(
                     format!("no scope associated with function {}", name))?;
                 let body_ty = body_ty.ok_or(
                     format!("type computation for body failed in function {}", name))?;
-                let ret_ty = &ret_type.borrow().item;
+                let ret_ty = &ret_type.item;
 
                 let r_ty = if let Some(ret_type_sym) = scope.borrow().resolve(&ret_ty) {
                     match ret_type_sym {
@@ -232,7 +229,7 @@ impl TypeComputationVisitor for Node<Statement> {
                 Some(body_ty)
             },
         };
-        self.annotation.set_type(ty);
+        self.annotation.borrow_mut().set_type(ty);
         Ok(())
     }
 }
@@ -240,7 +237,7 @@ impl TypeComputationVisitor for Node<Statement> {
 impl TypeComputationVisitor for Node<Expression> {
     fn visit(&mut self, state: &mut State) -> Result {
         // borrow the scope
-        let scope = match self.annotation.scope() {
+        let scope = match self.annotation.borrow().scope() {
             Some(ref s) => Rc::clone(&s),
             None => {
                 return Err("type computation attempted without defined symbols".to_string());
@@ -249,14 +246,14 @@ impl TypeComputationVisitor for Node<Expression> {
 
         let ty = match (&mut self.item, &mut self.annotation) {
             (&mut Expression::Literal(ref node), _) => {
-                match node.borrow().item {
+                match node.item {
                     Literal::String(_) => { Some(PType::String) },
                     Literal::Float(_) => { Some(PType::Float) },
                     Literal::Int(_) => { Some(PType::Int) }
                 }
             },
             (&mut Expression::Identifier(ref node), _) => {
-                match scope.borrow().resolve(&node.borrow().item) {
+                match scope.borrow().resolve(&node.item) {
                     Some(ref sym) => {
                         match *sym {
                             Symbol::Variable { ty, .. } => { ty },
@@ -268,65 +265,65 @@ impl TypeComputationVisitor for Node<Expression> {
                 }
             },
             (&mut Expression::Infix { ref mut left, ref mut right, ref op }, _) => {
-                left.borrow_mut().visit(state)?;
-                right.borrow_mut().visit(state)?;
-                let tleft = left.borrow().annotation.ty().unwrap();
-                let tright = right.borrow().annotation.ty().unwrap();
+                left.visit(state)?;
+                right.visit(state)?;
+                let tleft = left.annotation.borrow().ty().unwrap();
+                let tright = right.annotation.borrow().ty().unwrap();
                 match op.infer_result_type(tleft, tright) {
                     Some(ty) => {
-                        left.borrow_mut().annotation.set_promote_type(tleft.infer_promotion(ty));
-                        right.borrow_mut().annotation.set_promote_type(tright.infer_promotion(ty));
+                        left.annotation.borrow_mut().set_promote_type(tleft.infer_promotion(ty));
+                        right.annotation.borrow_mut().set_promote_type(tright.infer_promotion(ty));
                         Some(ty)
                     },
                     None => {
                         state.logger.error(format!("incompatible types for {}: {}, {}",
-                            op, left.borrow().item, right.borrow().item));
+                            op, left.item, right.item));
                         None
                     }
                 }
 
             },
             (&mut Expression::Prefix { ref mut right, ref op }, _) => {
-                right.borrow_mut().visit(state)?;
-                let tright = right.borrow().annotation.ty().unwrap();
+                right.visit(state)?;
+                let tright = right.annotation.borrow().ty().unwrap();
                 match op.infer_result_type(tright) {
                     Some(result_ty) => {
-                        right.borrow_mut().annotation.set_promote_type(
+                        right.annotation.borrow_mut().set_promote_type(
                             tright.infer_promotion(result_ty));
                         Some(result_ty)
                     },
                     None => {
                         state.logger.error(format!("incompatible type for {}: {}", op,
-                            right.borrow().item));
+                            right.item));
                         None
                     }
                 }
             },
             (&mut Expression::Postfix { ref mut left, ref op }, _) => {
-                left.borrow_mut().visit(state)?;
-                let tleft = left.borrow().annotation.ty().unwrap();
+                left.visit(state)?;
+                let tleft = left.annotation.borrow().ty().unwrap();
                 match op.infer_result_type(tleft) {
                     Some(result_ty) => {
-                        left.borrow_mut().annotation.set_promote_type(
+                        left.annotation.borrow_mut().set_promote_type(
                             tleft.infer_promotion(result_ty));
                         Some(result_ty)
                     },
                     None => {
                         state.logger.error(format!("incompatible type for {}: {}", op,
-                            left.borrow().item));
+                            left.item));
                         None
                     }
                 }
             },
             (&mut Expression::Block(ref mut block), _) => {
-                block.borrow_mut().visit(state)?;
-                block.borrow().annotation.ty()
+                block.visit(state)?;
+                block.annotation.borrow().ty()
             },
             (&mut Expression::FnCall { name: ref ident, ref mut args }, _) => {
                 for ref mut arg in args.iter_mut() {
-                    arg.borrow_mut().visit(state)?;
+                    arg.visit(state)?;
                 }
-                let id = &ident.borrow().item;
+                let id = &ident.item;
                 match scope.borrow().resolve(&id) {
                     Some(ref sym) => {
                         match *sym {
@@ -350,7 +347,7 @@ impl TypeComputationVisitor for Node<Expression> {
             }
         };
 
-        self.annotation.set_type(ty);
+        self.annotation.borrow_mut().set_type(ty);
         Ok(())
     }
 }

@@ -15,6 +15,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.borrow_mut().define_symbols().unwrap();
-    ast.borrow_mut().compute_types().unwrap();
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
 }

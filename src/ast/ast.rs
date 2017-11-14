@@ -4,28 +4,28 @@
 //! This abstract syntax tree is constructed by the rust-peg parser, and annotated by the AST
 //! visitors.
 
-use sindra::{Identifier, PNode};
+use sindra::{Identifier, Node};
 use ast::Annotation;
 
 /// Root-level program. Only contains a statement block.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program(pub PNode<Block>);
+pub struct Program(pub Node<Block>);
 annotate!(Program, Annotation);
 
 /// Statement block is simply a list of statements.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Block(pub Vec<PNode<Statement>>);
+pub struct Block(pub Vec<Node<Statement>>);
 annotate!(Block, Annotation);
 
 /// The various allowed statements in the piske programming language.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     /// Statement only containing an expression.
-    Expression(PNode<Expression>),
+    Expression(Node<Expression>),
     /// Variable declaration statement.
-    Declare(PNode<Identifier>, PNode<Expression>),
+    Declare(Node<Identifier>, Node<Expression>),
     /// Variable assignment statement.
-    Assign(PNode<Identifier>, PNode<Expression>),
+    Assign(Node<Identifier>, Node<Expression>),
     /// Function definition statement.
     FnDefine(FunctionDef),
     // GlobalSet(Identifier, Expression)
@@ -36,22 +36,22 @@ annotate!(Statement, Annotation);
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDef {
     /// Function name.
-    pub name: PNode<Identifier>,
+    pub name: Node<Identifier>,
     /// Return type.
-    pub ret_type: PNode<Identifier>,
+    pub ret_type: Node<Identifier>,
     /// List of function parameters.
-    pub params: Vec<PNode<Parameter>>,
+    pub params: Vec<Node<Parameter>>,
     /// Body of the function.
-    pub body: PNode<Block>,
+    pub body: Node<Block>,
 }
 
 /// Function parameter (used in function definitions).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     /// Paramter variable name.
-    pub name: PNode<Identifier>,
+    pub name: Node<Identifier>,
     /// Parameter variable type.
-    pub ty: PNode<Identifier>,
+    pub ty: Node<Identifier>,
 }
 annotate!(Parameter);
 
@@ -59,40 +59,40 @@ annotate!(Parameter);
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     /// A sole literal
-    Literal(PNode<Literal>),
+    Literal(Node<Literal>),
     /// An identifier
-    Identifier(PNode<Identifier>),
+    Identifier(Node<Identifier>),
     /// An infix operation, of form <expr> <op> <expr>
     Infix {
         /// The specific type of infix operation (e.g. add, subtract)
         op: InfixOp,
         /// The left operand
-        left: Box<PNode<Expression>>,
+        left: Box<Node<Expression>>,
         /// The right operand
-        right: Box<PNode<Expression>>,
+        right: Box<Node<Expression>>,
     },
     /// A prefix operation, of form <op> <expr>
     Prefix {
         /// The specific type of prefix operation (e.g. negation)
         op: PrefixOp,
         /// The operand
-        right: Box<PNode<Expression>>,
+        right: Box<Node<Expression>>,
     },
     /// A postfix operation, of form <expr> <op>
     Postfix {
         /// The specific type of postfix operation
         op: PostfixOp,
         /// The operand
-        left: Box<PNode<Expression>>,
+        left: Box<Node<Expression>>,
     },
     /// A block of statements is treated as an expression
-    Block(PNode<Block>),
+    Block(Node<Block>),
     /// A function call
     FnCall {
         /// Function name.
-        name: PNode<Identifier>,
+        name: Node<Identifier>,
         /// List of arguments passed into the function.
-        args: Vec<PNode<Expression>>
+        args: Vec<Node<Expression>>
     }
 }
 annotate!(Expression, Annotation);

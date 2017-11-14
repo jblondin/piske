@@ -18,9 +18,9 @@ add5(b)
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.borrow_mut().define_symbols().unwrap();
-    ast.borrow_mut().compute_types().unwrap();
-    assert_eq!(ast.borrow_mut().eval(), Ok(Value::Int(10)));
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
+    assert_eq!(ast.eval(), Ok(Value::Int(10)));
 }
 
 #[test]
@@ -34,7 +34,7 @@ add(2, b)
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.borrow_mut().define_symbols().unwrap();
-    ast.borrow_mut().compute_types().unwrap();
-    assert_eq!(ast.borrow_mut().eval(), Ok(Value::Float(7.0)));
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
+    assert_eq!(ast.eval(), Ok(Value::Float(7.0)));
 }

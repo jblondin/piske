@@ -46,14 +46,14 @@ impl SymbolDefineVisitor for Node<Program> {
         // define builtins in top-level (global) scope
         state.define_builtins();
         state.scope = state.scope.push();
-        self.item.0.borrow_mut().visit(state)?;
+        self.item.0.visit(state)?;
         match state.scope.pop() {
             Some(parent_scope) => { state.scope = parent_scope; }
             None => {
                 return Err("invalid descoping".to_string());
             }
         }
-        self.annotation.set_scope(Some(Rc::clone(&state.scope)));
+        self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         Ok(())
     }
 }
@@ -61,27 +61,27 @@ impl SymbolDefineVisitor for Node<Program> {
 impl SymbolDefineVisitor for Node<Block> {
     fn visit(&mut self, state: &mut State) -> Result {
         for statement in self.item.0.iter_mut() {
-            statement.borrow_mut().visit(state)?;
+            statement.visit(state)?;
         }
-        self.annotation.set_scope(Some(Rc::clone(&state.scope)));
+        self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         Ok(())
     }
 }
 
 impl SymbolDefineVisitor for Node<Statement> {
     fn visit(&mut self, state: &mut State) -> Result {
-        self.annotation.set_scope(Some(Rc::clone(&state.scope)));
+        self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         match self.item {
             Statement::Declare(ref id, ref mut expr) => {
-                expr.borrow_mut().visit(state)?;
-                let id = id.borrow().item.clone();
+                expr.visit(state)?;
+                let id = id.item.clone();
                 state.scope.borrow_mut().define(id.clone(),
                     Symbol::variable(id.clone(), None));
                 Ok(())
             },
             Statement::Assign(ref id, ref mut expr) => {
-                expr.borrow_mut().visit(state)?;
-                let id = id.borrow().item.clone();
+                expr.visit(state)?;
+                let id = id.item.clone();
                 let sym: Option<Symbol> = state.scope.borrow().resolve(&id);
                 match sym {
                     Some(_) => {
@@ -96,7 +96,7 @@ impl SymbolDefineVisitor for Node<Statement> {
                 }
             },
             Statement::Expression(ref mut expr) => {
-                expr.borrow_mut().visit(state)
+                expr.visit(state)
             },
             Statement::FnDefine(FunctionDef { ref name, ref mut body, ref params, .. }) => {
                 // make sure function definition is at top scope
@@ -107,23 +107,22 @@ impl SymbolDefineVisitor for Node<Statement> {
                     state.scope = state.global.push();
                     // define parameters in the new scope
                     for param in params.iter() {
-                        let param = param.borrow();
-                        let param_name = param.item.name.borrow().item.clone();
+                        let param_name = param.item.name.item.clone();
                         state.scope.borrow_mut().define(param_name.clone(),
                             Symbol::variable(param_name.clone(), None));
                     }
                     // define symbols in the body of the function
-                    body.borrow_mut().visit(state)?;
+                    body.visit(state)?;
                     // return to previous top-level scope
                     state.scope = prev_scope;
                     // add function symbol to scope
-                    state.scope.borrow_mut().define(name.borrow().item.clone(),
-                        Symbol::function(name.borrow().item.clone(), None, body.clone(),
+                    state.scope.borrow_mut().define(name.item.clone(),
+                        Symbol::function(name.item.clone(), None, body.clone(),
                             params.clone()));
                     Ok(())
                 } else {
                     state.logger.error(format!("function definition '{}' only allowed at \
-                        global scope", name.borrow().item));
+                        global scope", name.item));
                     Ok(())
                 }
             }
@@ -133,38 +132,38 @@ impl SymbolDefineVisitor for Node<Statement> {
 
 impl SymbolDefineVisitor for Node<Expression> {
     fn visit(&mut self, state: &mut State) -> Result {
-        self.annotation.set_scope(Some(Rc::clone(&state.scope)));
+        self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         match self.item {
             Expression::Literal(_) => {
                 Ok(())
             },
             Expression::Identifier(ref id) => {
-                let sym: Option<Symbol> = state.scope.borrow().resolve(&id.borrow().item);
+                let sym: Option<Symbol> = state.scope.borrow().resolve(&id.item);
                 match sym {
                     Some(_) => Ok(()),
                     None => {
                         state.logger.error(format!("symbol '{}' does not exist in scope",
-                            id.borrow().item));
+                            id.item));
                         Ok(())
                     }
                 }
             },
             Expression::Infix { ref mut left, ref mut right, .. } => {
-                left.borrow_mut().visit(state)?;
-                right.borrow_mut().visit(state)?;
+                left.visit(state)?;
+                right.visit(state)?;
                 Ok(())
             },
             Expression::Prefix { ref mut right, .. } => {
-                right.borrow_mut().visit(state)?;
+                right.visit(state)?;
                 Ok(())
             },
             Expression::Postfix { ref mut left, .. } => {
-                left.borrow_mut().visit(state)?;
+                left.visit(state)?;
                 Ok(())
             },
             Expression::Block(ref mut block) => {
                 state.scope = state.scope.push();
-                block.borrow_mut().visit(state)?;
+                block.visit(state)?;
                 match state.scope.pop() {
                     Some(parent_scope) => { state.scope = parent_scope; }
                     None => {
@@ -175,9 +174,9 @@ impl SymbolDefineVisitor for Node<Expression> {
             },
             Expression::FnCall { name: ref ident, ref mut args } => {
                 for ref mut arg in args.iter_mut() {
-                    arg.borrow_mut().visit(state)?;
+                    arg.visit(state)?;
                 }
-                let id = ident.borrow().item.clone();
+                let id = ident.item.clone();
                 match state.scope.borrow().resolve(&id) {
                     Some(Symbol::Function { ref params, .. }) => {
                         // verify that number of arguments matches number of parameters

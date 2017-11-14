@@ -1,50 +1,50 @@
 use ast::*;
-use sindra::PNode;
+use sindra::Node;
 use sindra::float::float_ext;
 use sindra::int::int_ext;
 use sindra::string::{match_str_ext, convert_string};
 use regex::Regex;
 
 #[pub]
-program -> PNode<Program>
-    = b:block { PNode::new(Program(b)) }
+program -> Node<Program>
+    = b:block { Node::new(Program(b)) }
 
 #[pub]
-block -> PNode<Block>
-    = vec:(ws stmt:statement ws { stmt })* { PNode::new(Block(vec)) }
+block -> Node<Block>
+    = vec:(ws stmt:statement ws { stmt })* { Node::new(Block(vec)) }
 
 #[pub]
-statement -> PNode<Statement>
+statement -> Node<Statement>
     = declare_statement
     / assign_statement
     / fn_define_statement
-    / expr:expression ws ";"? ws { PNode::new(Statement::Expression(expr)) }
+    / expr:expression ws ";"? ws { Node::new(Statement::Expression(expr)) }
 
-fn_define_statement -> PNode<Statement>
+fn_define_statement -> Node<Statement>
     = kw_fn fn_ident:identifier ws '(' vec:(ws params:parameters { params }) ')' ws "->" ws
         ret_type:identifier ws "{" body:block "}" {
-            PNode::new(Statement::FnDefine(FunctionDef { name: fn_ident,
+            Node::new(Statement::FnDefine(FunctionDef { name: fn_ident,
                 ret_type: ret_type, params: vec, body: body }))
         }
 
-parameters -> Vec<PNode<Parameter>>
+parameters -> Vec<Node<Parameter>>
     = parameter_ws**","
 
-parameter_ws -> PNode<Parameter>
+parameter_ws -> Node<Parameter>
     = ws p:parameter ws { p }
 
-parameter -> PNode<Parameter>
-    = ident:identifier ws ":" ws ty:identifier { PNode::new(Parameter { name: ident.clone(),
+parameter -> Node<Parameter>
+    = ident:identifier ws ":" ws ty:identifier { Node::new(Parameter { name: ident.clone(),
         ty: ty.clone() }) }
 
-declare_statement -> PNode<Statement>
+declare_statement -> Node<Statement>
     = kw_let ident:identifier ws "=" expr:expression ws (";" ws)? {
-        PNode::new(Statement::Declare(ident, expr))
+        Node::new(Statement::Declare(ident, expr))
     }
 
-assign_statement -> PNode<Statement>
+assign_statement -> Node<Statement>
     = ident:identifier  ws "=" expr:expression ws (";" ws)? {
-        PNode::new(Statement::Assign(ident, expr))
+        Node::new(Statement::Assign(ident, expr))
     }
 
 //global_statement -> Statement
@@ -59,77 +59,77 @@ kw_global = keyword<"set">
 
 kw = kw_let / kw_global / kw_fn;
 
-type -> PNode<Identifier>
+type -> Node<Identifier>
     = primitive_type / identifier
 
-primitive_type -> PNode<Identifier>
-    = 'real' { PNode::new(Identifier("real".to_string())) }
-    / 'int' { PNode::new(Identifier("int".to_string())) }
+primitive_type -> Node<Identifier>
+    = 'real' { Node::new(Identifier("real".to_string())) }
+    / 'int' { Node::new(Identifier("int".to_string())) }
 
 #[pub]
-arith_expression -> PNode<Expression>
+arith_expression -> Node<Expression>
     = infix_arith
     / signed_or_unsigned_primary
 
-expression_ws -> PNode<Expression>
+expression_ws -> Node<Expression>
     = ws e:expression ws { e }
 
 #[pub]
-expression -> PNode<Expression>
+expression -> Node<Expression>
     = i:identifier ws "(" ws pl:arg_list ws ")" {
-        PNode::new(Expression::FnCall { name: i, args: pl })
+        Node::new(Expression::FnCall { name: i, args: pl })
     }
-    / "{" ws b:block ws "}" { PNode::new(Expression::Block(b)) }
+    / "{" ws b:block ws "}" { Node::new(Expression::Block(b)) }
     / arith_expression
-    / lit:literal { PNode::new(Expression::Literal(lit)) }
+    / lit:literal { Node::new(Expression::Literal(lit)) }
 
-arg_list -> Vec<PNode<Expression>>
+arg_list -> Vec<Node<Expression>>
     = expression_ws**","
 
-atom -> PNode<Expression>
-    = ws n:num ws { PNode::new(Expression::Literal(n)) }
-    / ws i:identifier ws { PNode::new(Expression::Identifier(i)) }
+atom -> Node<Expression>
+    = ws n:num ws { Node::new(Expression::Literal(n)) }
+    / ws i:identifier ws { Node::new(Expression::Identifier(i)) }
     / ws g:grouped_arith ws { g }
 
-conjugated_atom -> PNode<Expression>
+conjugated_atom -> Node<Expression>
     = a:atom ws "`" {
-        PNode::new(Expression::Postfix { op: PostfixOp::Conjugate, left: Box::new(a) })
+        Node::new(Expression::Postfix { op: PostfixOp::Conjugate, left: Box::new(a) })
     }
 
-primary -> PNode<Expression>
+primary -> Node<Expression>
     = ws c:conjugated_atom ws { c }
     / ws a:atom ws { a }
 
-signed_primary -> PNode<Expression>
+signed_primary -> Node<Expression>
     = ws "+" p:primary {
-        PNode::new(Expression::Prefix { op: PrefixOp::UnaryPlus, right: Box::new(p) })
+        Node::new(Expression::Prefix { op: PrefixOp::UnaryPlus, right: Box::new(p) })
      }
     / ws "-" p:primary {
-        PNode::new(Expression::Prefix { op: PrefixOp::UnaryMinus, right: Box::new(p) })
+        Node::new(Expression::Prefix { op: PrefixOp::UnaryMinus, right: Box::new(p) })
     }
 
-signed_or_unsigned_primary -> PNode<Expression>
+signed_or_unsigned_primary -> Node<Expression>
     = primary
     / signed_primary
 
-grouped_arith -> PNode<Expression>
+grouped_arith -> Node<Expression>
     = "(" expr:arith_expression ")" { expr }
 
-infix_arith -> PNode<Expression> = #infix<signed_or_unsigned_primary> {
+infix_arith -> Node<Expression> = #infix<signed_or_unsigned_primary> {
     #L l "+" r {
-        PNode::new(Expression::Infix { op: InfixOp::Add, left: Box::new(l), right: Box::new(r) })
+        Node::new(Expression::Infix { op: InfixOp::Add, left: Box::new(l), right: Box::new(r) })
     }
        l "-" r {
-        PNode::new(Expression::Infix { op: InfixOp::Subtract, left: Box::new(l), right: Box::new(r) })
+        Node::new(Expression::Infix { op: InfixOp::Subtract, left: Box::new(l), right: Box::new(r) })
     }
     #L l "*" r {
-        PNode::new(Expression::Infix { op: InfixOp::Multiply, left: Box::new(l), right: Box::new(r) })
+        Node::new(Expression::Infix { op: InfixOp::Multiply, left: Box::new(l), right: Box::new(r) })
     }
        l "/" r {
-        PNode::new(Expression::Infix { op: InfixOp::Divide, left: Box::new(l), right: Box::new(r) })
+        Node::new(Expression::Infix { op: InfixOp::Divide, left: Box::new(l), right: Box::new(r) })
     }
     #R l "^" r {
-        PNode::new(Expression::Infix { op: InfixOp::Power, left: Box::new(l), right: Box::new(r) })
+        Node::new(Expression::Infix { op: InfixOp::Power, left: Box::new(l), right: Box::new(r) })
     }
 }
 
@@ -158,21 +158,21 @@ comment_multi_line
     = "/*" (!"*/" .)* "*/"
 
 #[pub]
-literal -> PNode<Literal>
+literal -> Node<Literal>
     = num
     / string
 
-num -> PNode<Literal>
-    = f:#ext<float> { PNode::new(Literal::Float(f)) }
-    / i:#ext<int> { PNode::new(Literal::Int(i)) }
+num -> Node<Literal>
+    = f:#ext<float> { Node::new(Literal::Float(f)) }
+    / i:#ext<int> { Node::new(Literal::Int(i)) }
 
 str -> String
     = s:#ext<match_str> {? convert_string(s) }
 
-string -> PNode<Literal>
-    = s:str { PNode::new(Literal::String(s)) }
+string -> Node<Literal>
+    = s:str { Node::new(Literal::String(s)) }
 
-identifier -> PNode<Identifier>
+identifier -> Node<Identifier>
     = !kw s:@"\p{XID_Start}\p{XID_Continue}*"@ {
-        PNode::new(Identifier(s.get(0).unwrap().as_str().to_string()))
+        Node::new(Identifier(s.get(0).unwrap().as_str().to_string()))
     }

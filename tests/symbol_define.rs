@@ -13,6 +13,6 @@ a;
     "#;
 
     let mut ast = program(prog).unwrap();
-    ast.borrow_mut().define_symbols().unwrap();
+    ast.define_symbols().unwrap();
     println!("{:?}", ast);
 }

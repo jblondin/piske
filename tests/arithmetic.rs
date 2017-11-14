@@ -1,7 +1,7 @@
 extern crate piske;
 extern crate sindra;
 
-use sindra::PNode;
+use sindra::Node;
 
 use piske::parse::{expression};
 use piske::ast::ast::*;
