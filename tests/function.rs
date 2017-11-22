@@ -38,3 +38,37 @@ add(2, b)
     ast.compute_types().unwrap();
     assert_eq!(ast.eval(), Ok(Value::Float(7.0)));
 }
+
+#[test]
+fn test_return() {
+    let prog = r#"
+fn greater_than_five(a: int) -> bool {
+    if a > 5 {
+        return true;
+    }
+    false
+}
+greater_than_five(6)
+    "#;
+
+    let ast = program(prog).unwrap();
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
+    assert_eq!(ast.eval(), Ok(Value::Boolean(true)));
+
+    let prog = r#"
+fn greater_than_five(a: int) -> bool {
+    if a > 5 {
+        return true;
+    }
+    false
+}
+greater_than_five(5)
+    "#;
+
+    let ast = program(prog).unwrap();
+    ast.define_symbols().unwrap();
+    ast.compute_types().unwrap();
+    assert_eq!(ast.eval(), Ok(Value::Boolean(false)));
+
+}

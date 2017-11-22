@@ -28,7 +28,10 @@ pub enum Statement {
     Assign(Node<Identifier>, Node<Expression>),
     /// Function definition statement.
     FnDefine(FunctionDef),
-    // GlobalSet(Identifier, Expression)
+    /// Return statement.
+    Return(Node<Expression>),
+    /// Break statement.
+    Break(Node<Expression>),
 }
 annotate!(Statement, Annotation);
 
@@ -85,7 +88,7 @@ pub enum Expression {
         /// The operand
         left: Box<Node<Expression>>,
     },
-    /// A block of statements is treated as an expression
+    /// A block of statements is treated as an expression (and can have a return value)
     Block(Node<Block>),
     /// A function call
     FnCall {
@@ -93,9 +96,44 @@ pub enum Expression {
         name: Node<Identifier>,
         /// List of arguments passed into the function.
         args: Vec<Node<Expression>>
+    },
+    /// If / else expression
+    IfElse {
+        /// conditional
+        cond: Box<Node<Expression>>,
+        /// if-block (executed if cond is true)
+        if_block: Node<Block>,
+        /// else-block (executed if cond is false); optional
+        else_block: Option<Node<Block>>
+    },
+    /// Loop expression
+    Loop {
+        /// name of loop-varying symbol
+        variant: Option<Node<Identifier>>,
+        /// set of elements to loop over
+        set: Node<Set>,
+        /// loop body
+        body: Node<Block>,
     }
 }
 annotate!(Expression, Annotation);
+
+/// Set (collection) structure
+#[derive(Debug, Clone, PartialEq)]
+pub enum Set {
+    /// Interval-defined set
+    Interval {
+        /// Start of interval (inclusive)
+        start: Box<Node<Expression>>,
+        /// End of interval
+        end: Box<Node<Expression>>,
+        /// Whether or not interval end is inclusive
+        end_inclusive: bool,
+        /// Interval step
+        step: Box<Node<Expression>>
+    },
+}
+annotate!(Set, Annotation);
 
 /// Supported literals
 #[derive(Debug, Clone, PartialEq)]
@@ -106,6 +144,8 @@ pub enum Literal {
     Float(f64),
     /// Integer literal
     Int(i64),
+    /// Boolean literal
+    Boolean(bool),
 }
 annotate!(Literal);
 
@@ -130,7 +170,9 @@ pub enum InfixOp {
     /// Division
     Divide,
     /// Exponentiation
-    Power
+    Power,
+    /// Comparison
+    Comparison(CompareOp),
 }
 
 /// Valid postfix operations
@@ -138,4 +180,21 @@ pub enum InfixOp {
 pub enum PostfixOp {
     /// Conjugation
     Conjugate,
+}
+
+/// Comparison operations
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CompareOp {
+    /// Lhs strictly less than rhs
+    LessThan,
+    /// Lhs less than or equal to rhs
+    LessThanEqual,
+    /// Lhs strictly greater than rhs
+    GreaterThan,
+    /// Lhs greater than or euqal to rhs
+    GreaterThanEqual,
+    /// Lhs strictly equal to rhs
+    Equal,
+    /// Lhs not equal rhs
+    NotEqual
 }

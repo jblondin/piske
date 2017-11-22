@@ -52,9 +52,34 @@ impl TypeComputationVisitor for Node<Program> {
 impl TypeComputationVisitor for Node<Block> {
     fn visit(&self, state: &mut State) -> Result {
         let mut last_ty: Option<PType> = None;
+        let mut ret_ty: Option<PType> = None;
         for statement in self.item.0.iter() {
             statement.visit(state)?;
             last_ty = statement.annotation.borrow_mut().ty();
+
+            // if statement is return, see if it matches previous return types
+            if let Statement::Return(_) = statement.item {
+                match ret_ty {
+                    Some(_) => {
+                        if last_ty != ret_ty {
+                            state.logger.error(format!("return types do not match"));
+                        }
+                    },
+                    None => {
+                        ret_ty = last_ty.clone();
+                    }
+                }
+            }
+
+        }
+        match ret_ty {
+            Some(_) => {
+                if last_ty != ret_ty {
+                    state.logger.error("return type does not match type of \
+                        final block statement".to_string());
+                }
+            },
+            None => {}
         }
         self.annotation.borrow_mut().set_type(last_ty);
         Ok(())
@@ -228,6 +253,10 @@ impl TypeComputationVisitor for Node<Statement> {
 
                 Some(body_ty)
             },
+            (&Statement::Return(ref expr), _) | (&Statement::Break(ref expr), _) => {
+                expr.visit(state)?;
+                expr.annotation.borrow().ty()
+            }
         };
         self.annotation.borrow_mut().set_type(ty);
         Ok(())
@@ -247,9 +276,10 @@ impl TypeComputationVisitor for Node<Expression> {
         let ty = match (&self.item, &self.annotation) {
             (&Expression::Literal(ref node), _) => {
                 match node.item {
-                    Literal::String(_) => { Some(PType::String) },
-                    Literal::Float(_) => { Some(PType::Float) },
-                    Literal::Int(_) => { Some(PType::Int) }
+                    Literal::String(_) => Some(PType::String),
+                    Literal::Float(_) => Some(PType::Float),
+                    Literal::Int(_) => Some(PType::Int),
+                    Literal::Boolean(_) => Some(PType::Boolean),
                 }
             },
             (&Expression::Identifier(ref node), _) => {
@@ -332,7 +362,13 @@ impl TypeComputationVisitor for Node<Expression> {
                                     "attempt to call function on variable {}", id));
                                 None
                             },
-                            Symbol::Function { ret_ty, .. } => ret_ty,
+                            Symbol::Function { ret_ty, ref name, .. } => {
+                                if ret_ty.is_none() {
+                                    state.logger.error(format!(
+                                        "function '{}' does not have a valid return type", name));
+                                }
+                                ret_ty
+                            },
                             Symbol::BuiltinType { .. } => {
                                 state.logger.error(format!(
                                     "attempt to call function on built-in type {}", id));
@@ -344,9 +380,79 @@ impl TypeComputationVisitor for Node<Expression> {
                         return Err(format!("function '{}' does not exist", id));
                     }
                 }
+            },
+            (&Expression::IfElse { ref cond, ref if_block, ref else_block }, _) => {
+                cond.visit(state)?;
+                // check type of conditional
+                let tcond = cond.annotation.borrow().ty().unwrap();
+                if tcond == PType::Boolean {
+                    if_block.visit(state)?;
+                    if let Some(ref else_block) = *else_block {
+                        else_block.visit(state)?;
+
+                        let tif = if_block.annotation.borrow().ty().unwrap();
+                        let telse = else_block.annotation.borrow().ty().unwrap();
+
+                        if tif == telse {
+                            Some(tif)
+                        } else {
+                            state.logger.error(format!(
+                                "invalid if-else construct: if block returns type '{}', \
+                                else block returns type '{}'", tif, telse));
+                            Some(PType::Void)
+                        }
+                    } else {
+                        Some(PType::Void)
+                    }
+                } else {
+                    state.logger.error(format!(
+                        "conditional expression must be boolean, found type '{}'", tcond));
+                    Some(PType::Void)
+                }
+            },
+            (&Expression::Loop { ref variant, ref set, ref body }, _) => {
+                set.visit(state)?;
+                let var_ty = set.annotation.borrow().ty().unwrap();
+                match *variant {
+                    Some(ref var) => {
+                        body.annotation.borrow_mut().define(var.item.clone(),
+                            Symbol::variable(var.item.clone(), Some(var_ty)));
+                    },
+                    None => {}
+                }
+                body.visit(state)?;
+                Some(body.annotation.borrow().ty().unwrap())
             }
         };
+        self.annotation.borrow_mut().set_type(ty);
+        Ok(())
+    }
+}
 
+impl TypeComputationVisitor for Node<Set> {
+    fn visit(&self, state: &mut State) -> Result {
+        let ty = match self.item {
+            Set::Interval { ref start, ref end, ref step, .. } => {
+                start.visit(state)?;
+                end.visit(state)?;
+                step.visit(state)?;
+
+                //TODO: handle promotion from int to float
+                let (tstart, tend, tstep) = (
+                    start.annotation.borrow().ty().unwrap(),
+                    end.annotation.borrow().ty().unwrap(),
+                    step.annotation.borrow().ty().unwrap(),
+                );
+
+                if tstart == tend && tstart == tstep {
+                    Some(tstart)
+                } else {
+                    state.logger.error(format!("'start' ({}), 'end' ({}), and 'step' ({}) values \
+                        are required to be of same type", tstart, tend, tstep));
+                    None
+                }
+            }
+        };
         self.annotation.borrow_mut().set_type(ty);
         Ok(())
     }

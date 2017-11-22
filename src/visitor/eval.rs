@@ -14,7 +14,7 @@ use sindra::value::Coerce;
 
 use ast::*;
 use Symbol;
-use value::Value;
+use value::{Value, ValueSet, SetInterval};
 use visitor::State;
 
 type Result = ::std::result::Result<Value, String>;
@@ -49,6 +49,11 @@ impl EvaluateVisitor for Node<Block> {
         let mut last_result: Value = Value::Empty;
         for statement in self.item.0.iter() {
             last_result = statement.visit(state)?;
+            // if we have a return / break value, short-circuit this block and return it
+            match last_result {
+                Value::Return(_) | Value::Break(_) => { return Ok(last_result); }
+                _ => {}
+            }
         }
         Ok(last_result)
     }
@@ -81,8 +86,14 @@ impl EvaluateVisitor for Node<Statement> {
                 expr.visit(state)
             },
             (&Statement::FnDefine { .. }, _) => {
-                // Err("unimplemented".to_string())
+                // nothing to evaluate for function definitions
                 Ok(Value::Empty)
+            },
+            (&Statement::Return(ref expr), _) => {
+                Ok(Value::Return(Box::new(expr.visit(state)?)))
+            }
+            (&Statement::Break(ref expr), _) => {
+                Ok(Value::Break(Box::new(expr.visit(state)?)))
             }
         }
     }
@@ -142,11 +153,12 @@ impl EvaluateVisitor for Node<Expression> {
                     evaluated_args.push(arg.visit(state)?);
                 }
 
-                let scope = annotation.borrow().scope().ok_or(format!("invalid scope when calling funciton \
+                let scope = annotation.borrow().scope().ok_or(format!(
+                    "invalid scope when calling function \
                     '{}'", name.item))?;
 
                 let sym: Symbol = scope.borrow().resolve(&name.item).ok_or(format!(
-                    "unintialized variable '{}'", name.item))?;
+                    "symbol not found: '{}'", name.item))?;
 
                 match sym {
                     Symbol::Function { ref name, ref body, ref params, .. } => {
@@ -164,16 +176,80 @@ impl EvaluateVisitor for Node<Expression> {
 
                         let prev_scope = Rc::clone(&state.scope);
                         state.scope = fn_scope;
-                        // evaluate body
-                        let val = body.visit(state)?;
+                        // evaluate body, and handle possible return values (by unwrapping them)
+                        let val = match body.visit(state)? {
+                            Value::Return(returned_val) => {
+                                *returned_val
+                            },
+                            val => val,
+                        };
+
                         // reset scope
                         state.scope = Rc::clone(&prev_scope);
                         // return result
                         Ok(val)
                     }
-                    _ => Err(format!("unable to call symbol '{}' as function",
-                        name.item))
+                    _ => Err(format!("unable to call symbol '{}' as function", name.item))
                 }
+            }
+            (&Expression::IfElse { ref cond, ref if_block, ref else_block }, _) => {
+                match cond.visit(state)? {
+                    Value::Boolean(b) => {
+                        if b {
+                            if_block.visit(state)
+                        } else {
+                            if let Some(ref eblock) = *else_block {
+                                eblock.visit(state)
+                            } else {
+                                // only if block exists; thus no value is generated
+                                Ok(Value::Empty)
+                            }
+                        }
+                    },
+                    _ => Err(format!("conditional expression expected to be boolean"))
+                }
+            }
+            (&Expression::Loop { ref variant, ref set, ref body }, _) => {
+                let value_set = match set.visit(state)? {
+                    Value::Set(value_set) => value_set,
+                    _ => { return Err("loop specification did not evaluate as a set".to_string()); }
+                };
+                let mut val = Value::Empty;
+                for elem in value_set.iter()? {
+                    if let Some(scope) = body.annotation.borrow().scope() {
+                        match *variant {
+                            Some(ref var) => {
+                                scope.borrow_mut().set(var.item.clone(), elem.clone())?;
+                            },
+                            None => {}
+                        }
+                    } else {
+                        return Err(
+                            "missing scope when trying to evaluate loop".to_string());
+                    }
+                    val = match body.visit(state)? {
+                        Value::Break(returned_val) => {
+                            *returned_val
+                        },
+                        v => v
+                    }
+                }
+                Ok(val)
+            }
+        }
+    }
+}
+
+impl EvaluateVisitor for Node<Set> {
+    fn visit(&self, state: &mut State) -> Result {
+        match self.item {
+            Set::Interval { ref start, ref end, end_inclusive, ref step } => {
+                Ok(Value::Set(Box::new(ValueSet::Interval(SetInterval {
+                    start: start.visit(state)?,
+                    end: end.visit(state)?,
+                    end_inclusive: end_inclusive,
+                    step: step.visit(state)?,
+                }))))
             }
         }
     }

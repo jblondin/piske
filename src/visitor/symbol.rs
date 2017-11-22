@@ -34,18 +34,24 @@ pub trait SymbolDefineVisitor {
     fn visit(&self, &mut State) -> Result;
 }
 
+
+fn visit_block(block: &Node<Block>, state: &mut State) -> Result {
+    state.scope = state.scope.push();
+    block.visit(state)?;
+    match state.scope.pop() {
+        Some(parent_scope) => { state.scope = parent_scope; }
+        None => {
+            return Err("invalid descoping".to_string());
+        }
+    }
+    Ok(())
+}
+
 impl SymbolDefineVisitor for Node<Program> {
     fn visit(&self, state: &mut State) -> Result {
         // define builtins in top-level (global) scope
         state.define_builtins();
-        state.scope = state.scope.push();
-        self.item.0.visit(state)?;
-        match state.scope.pop() {
-            Some(parent_scope) => { state.scope = parent_scope; }
-            None => {
-                return Err("invalid descoping".to_string());
-            }
-        }
+        visit_block(&self.item.0, state)?;
         self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         Ok(())
     }
@@ -118,6 +124,10 @@ impl SymbolDefineVisitor for Node<Statement> {
                         global scope", name.item));
                     Ok(())
                 }
+            },
+            Statement::Return(ref expr) | Statement::Break(ref expr) => {
+                expr.visit(state)?;
+                Ok(())
             }
         }
     }
@@ -155,15 +165,7 @@ impl SymbolDefineVisitor for Node<Expression> {
                 Ok(())
             },
             Expression::Block(ref block) => {
-                state.scope = state.scope.push();
-                block.visit(state)?;
-                match state.scope.pop() {
-                    Some(parent_scope) => { state.scope = parent_scope; }
-                    None => {
-                        return Err("invalid descoping".to_string());
-                    }
-                }
-                Ok(())
+                visit_block(block, state)
             },
             Expression::FnCall { name: ref ident, ref args } => {
                 for ref arg in args.iter() {
@@ -191,6 +193,51 @@ impl SymbolDefineVisitor for Node<Expression> {
                         Ok(())
                     }
                 }
+            },
+            Expression::IfElse { ref cond, ref if_block, ref else_block } => {
+                cond.visit(state)?;
+                visit_block(if_block, state)?;
+                if let Some(ref else_block) = *else_block {
+                    visit_block(else_block, state)?;
+                }
+                Ok(())
+            },
+            Expression::Loop { ref variant, ref set, ref body } => {
+                // create new scope for loop variant and body
+                state.scope = state.scope.push();
+                set.visit(state)?;
+                // define loop variant symbol
+                match *variant {
+                    Some(ref var) => {
+                        state.scope.borrow_mut().define(var.item.clone(),
+                            Symbol::variable(var.item.clone(), None));
+                    },
+                    None => {}
+                }
+                // visit body (in this scope)
+                body.visit(state)?;
+                // return to parent
+                match state.scope.pop() {
+                    Some(parent_scope) => { state.scope = parent_scope; }
+                    None => {
+                        return Err("invalid descoping".to_string());
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl SymbolDefineVisitor for Node<Set> {
+    fn visit(&self, state: &mut State) -> Result {
+        self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
+        match self.item {
+            Set::Interval { ref start, ref end, ref step, .. } => {
+                start.visit(state)?;
+                end.visit(state)?;
+                step.visit(state)?;
+                Ok(())
             }
         }
     }

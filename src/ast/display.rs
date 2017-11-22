@@ -30,7 +30,6 @@ impl fmt::Display for Statement {
             Statement::Assign(ref ident, ref expr) => write!(f, "assign({}->{})",
                 ident.item, expr.item),
             Statement::FnDefine(FunctionDef { ref name, ref body, ref params, ref ret_type }) => {
-            // Statement::FnDefine { ref name, ref ret_type, ref params, ref body } => {
                 let mut pl = String::new();
                 let mut first = true;
                 for expr in params {
@@ -43,7 +42,9 @@ impl fmt::Display for Statement {
                 }
                 write!(f, "def({}({}) -> {}) {}", name.item, pl, ret_type.item,
                     body.item)
-            }
+            },
+            Statement::Return(ref expr) => write!(f, "return({})", expr.item),
+            Statement::Break(ref expr) => write!(f, "break({})", expr.item),
         }
     }
 }
@@ -80,6 +81,29 @@ impl fmt::Display for Expression {
                 }
                 write!(f, "fn{{{}}}({})", ident.item, pl)
             }
+            Expression::IfElse { ref cond, ref if_block, else_block: Some(ref elseb) } => {
+                write!(f, "if({}){{{}}}{{{}}}", cond.item, if_block.item, elseb.item)
+            },
+            Expression::IfElse { ref cond, ref if_block, else_block: None } => {
+                write!(f, "if({}){{{}}}", cond.item, if_block.item)
+            },
+            Expression::Loop { ref variant, ref set, ref body } => {
+                match *variant {
+                    Some(ref var) => write!(f, "for({}={}){{{}}}", var.item, set.item, body.item),
+                    None => write!(f, "for({}){{{}}}", set.item, body.item),
+                }
+            }
+        }
+    }
+}
+
+impl fmt::Display for Set {
+    fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
+        match *self {
+            Set::Interval { ref start, ref end, end_inclusive, ref step } => {
+                let end_bracket = if end_inclusive { "]" } else { ")" };
+                write!(f, "[{}..{}..{}{}", start.item, step.item, end.item, end_bracket)
+            }
         }
     }
 }
@@ -90,6 +114,7 @@ impl fmt::Display for Literal {
             Literal::String(ref s) => write!(f, "\"{}\"", s),
             Literal::Float(ref fl) => write!(f, "{}", fl),
             Literal::Int(ref i) => write!(f, "{}", *i),
+            Literal::Boolean(ref b) => write!(f, "{}", b),
         }
     }
 }
@@ -111,6 +136,16 @@ impl fmt::Display for InfixOp {
             InfixOp::Multiply => write!(f, "*"),
             InfixOp::Divide => write!(f, "/"),
             InfixOp::Power => write!(f, "^"),
+            InfixOp::Comparison(op) => {
+                match op {
+                    CompareOp::LessThan => write!(f, "<"),
+                    CompareOp::LessThanEqual => write!(f, "<="),
+                    CompareOp::GreaterThan => write!(f, ">"),
+                    CompareOp::GreaterThanEqual => write!(f, ">="),
+                    CompareOp::Equal => write!(f, "=="),
+                    CompareOp::NotEqual => write!(f, "!="),
+                }
+            }
         }
     }
 }

@@ -18,6 +18,8 @@ statement -> Node<Statement>
     = declare_statement
     / assign_statement
     / fn_define_statement
+    / return_statement
+    / break_statement
     / expr:expression ws ";"? ws { Node::new(Statement::Expression(expr)) }
 
 fn_define_statement -> Node<Statement>
@@ -47,17 +49,31 @@ assign_statement -> Node<Statement>
         Node::new(Statement::Assign(ident, expr))
     }
 
-//global_statement -> Statement
-//    = kw_global ws id:identifier ws "(" ws expr:expression ws ")" ws (";" ws)? {
-//        Statement::GlobalSet(id, expr)
-//    }
+return_statement -> Node<Statement>
+    = kw_return ws expr:expression ws (";" ws)? {
+        Node::new(Statement::Return(expr))
+    }
+
+break_statement -> Node<Statement>
+    = kw_break ws expr:expression ws (";" ws)? {
+        Node::new(Statement::Break(expr))
+    }
 
 keyword<k> = k !@"\p{XID_Continue}"@ ws
 kw_let = keyword<"let">
 kw_fn = keyword<"fn">
 kw_global = keyword<"set">
+kw_if = keyword<"if">
+kw_else = keyword<"else">
+kw_true = keyword<"true">
+kw_false = keyword<"false">
+kw_iterate = keyword<"iterate">
+kw_over = keyword<"over">
+kw_return = keyword<"return">
+kw_break = keyword<"break">
 
-kw = kw_let / kw_global / kw_fn;
+kw = kw_let / kw_global / kw_fn / kw_if / kw_else / kw_true / kw_false / kw_iterate / kw_over
+    / kw_return / kw_break;
 
 type -> Node<Identifier>
     = primitive_type / identifier
@@ -65,6 +81,7 @@ type -> Node<Identifier>
 primitive_type -> Node<Identifier>
     = 'real' { Node::new(Identifier("real".to_string())) }
     / 'int' { Node::new(Identifier("int".to_string())) }
+    / 'bool' { Node::new(Identifier("bool".to_string())) }
 
 #[pub]
 arith_expression -> Node<Expression>
@@ -82,6 +99,8 @@ expression -> Node<Expression>
     / "{" ws b:block ws "}" { Node::new(Expression::Block(b)) }
     / arith_expression
     / lit:literal { Node::new(Expression::Literal(lit)) }
+    / ifelse
+    / loop
 
 arg_list -> Vec<Node<Expression>>
     = expression_ws**","
@@ -116,6 +135,30 @@ grouped_arith -> Node<Expression>
     = "(" expr:arith_expression ")" { expr }
 
 infix_arith -> Node<Expression> = #infix<signed_or_unsigned_primary> {
+    #L l "==" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::Equal),
+            left: Box::new(l), right: Box::new(r) })
+    }
+       l "!=" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::NotEqual),
+            left: Box::new(l), right: Box::new(r) })
+    }
+    #L l "<=" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::LessThanEqual),
+            left: Box::new(l), right: Box::new(r) })
+    }
+       l ">=" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::GreaterThanEqual),
+            left: Box::new(l), right: Box::new(r) })
+    }
+    #L l "<" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::LessThan),
+            left: Box::new(l), right: Box::new(r) })
+    }
+       l ">" r {
+        Node::new(Expression::Infix { op: InfixOp::Comparison(CompareOp::GreaterThan),
+            left: Box::new(l), right: Box::new(r) })
+    }
     #L l "+" r {
         Node::new(Expression::Infix { op: InfixOp::Add, left: Box::new(l), right: Box::new(r) })
     }
@@ -132,6 +175,78 @@ infix_arith -> Node<Expression> = #infix<signed_or_unsigned_primary> {
         Node::new(Expression::Infix { op: InfixOp::Power, left: Box::new(l), right: Box::new(r) })
     }
 }
+
+ifelse -> Node<Expression>
+    = ws kw_if ws cond:expression ws ifb:paren_block ws kw_else ws elseb:paren_block ws {
+        Node::new(Expression::IfElse {
+            cond: Box::new(cond),
+            if_block: ifb,
+            else_block: Some(elseb)
+        })
+    }
+    / ws kw_if ws cond:expression ws ifb:paren_block ws {
+        Node::new(Expression::IfElse {
+            cond: Box::new(cond),
+            if_block: ifb,
+            else_block: None
+        })
+    }
+
+paren_block -> Node<Block>
+    = "{" ws b:block ws "}" { b }
+
+loop -> Node<Expression>
+    = interval
+
+interval -> Node<Expression>
+    = ws kw_iterate ws kw_over ws int:set_interval ws body:paren_block ws {
+        Node::new(Expression::Loop {
+            variant: None,
+            set: int,
+            body: body,
+        })
+    }
+    / ws kw_iterate ws i:identifier ws "=" ws int:set_interval ws body:paren_block ws {
+        Node::new(Expression::Loop {
+            variant: Some(i),
+            set: int,
+            body: body,
+        })
+    }
+
+set_interval -> Node<Set>
+    = "[" ws start:expression ws "," ws end:expression ws ")" {
+        Node::new(Set::Interval {
+            start: Box::new(start),
+            end: Box::new(end),
+            end_inclusive: false,
+            step: Box::new(Node::new(Expression::Literal(Node::new(Literal::Int(1)))))
+        })
+    }
+    / "[" ws start:expression ws ".." ws step:expression ".." end:expression ws ")" {
+        Node::new(Set::Interval {
+            start: Box::new(start),
+            end: Box::new(end),
+            end_inclusive: false,
+            step: Box::new(Node::new(Expression::Literal(Node::new(Literal::Int(1)))))
+        })
+    }
+    / "[" ws start:expression ws "," ws end:expression ws "]" {
+        Node::new(Set::Interval {
+            start: Box::new(start),
+            end: Box::new(end),
+            end_inclusive: true,
+            step: Box::new(Node::new(Expression::Literal(Node::new(Literal::Int(1)))))
+        })
+    }
+    / "[" ws start:expression ws ".." ws step:expression ".." end:expression ws "]" {
+        Node::new(Set::Interval {
+            start: Box::new(start),
+            end: Box::new(end),
+            end_inclusive: true,
+            step: Box::new(Node::new(Expression::Literal(Node::new(Literal::Int(1)))))
+        })
+    }
 
 ws = #quiet<(ws_char / eol / comment)*>
 
@@ -161,6 +276,7 @@ comment_multi_line
 literal -> Node<Literal>
     = num
     / string
+    / boolean
 
 num -> Node<Literal>
     = f:#ext<float> { Node::new(Literal::Float(f)) }
@@ -171,6 +287,13 @@ str -> String
 
 string -> Node<Literal>
     = s:str { Node::new(Literal::String(s)) }
+
+truefalse -> bool
+    = "true" { true }
+    / "false" { false }
+
+boolean -> Node<Literal>
+    = b:truefalse { Node::new(Literal::Boolean(b)) }
 
 identifier -> Node<Identifier>
     = !kw s:@"\p{XID_Start}\p{XID_Continue}*"@ {

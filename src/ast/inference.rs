@@ -8,11 +8,24 @@ lazy_static! {
     /// Result type definition for all arithmetic infix operations. `Some(...)` indicates that the
     /// operation is possible and has the given result type, `None` indicates that the operation
     /// is invalid on the supplied types.
-    pub static ref ARITH_RESULT_TABLE: [[Option<PType>; 3]; 3] = [
-    // Right:  String,              Float,                Int    // Left:
-              [  None,               None,               None ], // String
-              [  None, Some(PType::Float), Some(PType::Float) ], // Float
-              [  None, Some(PType::Float),   Some(PType::Int) ]  // Int
+    pub static ref ARITH_RESULT_TABLE: [[Option<PType>; 4]; 4] = [
+    // Right:  String,              Float,                Int,   Boolean    // Left:
+              [  None,               None,               None,      None ], // String
+              [  None, Some(PType::Float), Some(PType::Float),      None ], // Float
+              [  None, Some(PType::Float),   Some(PType::Int),      None ], // Int
+              [  None,               None,               None,      None ]  // Boolean
+    ];
+}
+
+lazy_static! {
+    /// Table of comparable (via comparison operators; e.g. <, <=, >, >=) types. 'true' indicates
+    /// the types are comparable, 'false' indicates they are not.
+    pub static ref COMPARABLE: [[bool; 4]; 4] = [
+    // Right:  String, Float,   Int, Boolean    // Left:
+              [  true, false, false,   false ], // String
+              [ false,  true,  true,   false ], // Float
+              [ false,  true,  true,   false ], // Int
+              [ false, false, false,    true ]  // Boolean
     ];
 }
 
@@ -29,6 +42,13 @@ impl InferResultBinary for InfixOp {
                     None
                 } else {
                     Some(PType::Float)
+                }
+            },
+            InfixOp::Comparison(_) => {
+                if COMPARABLE[left as usize][right as usize] {
+                    Some(PType::Boolean)
+                } else {
+                    None
                 }
             }
 
@@ -58,20 +78,25 @@ impl InferResultUnary for PostfixOp {
     }
 }
 
-lazy_static! {
-    /// Promotion requirements for possible target types. `Some(...)` indicates that promotion is
-    /// required for particular type, `None` indicates that either no promotion is required or that
-    /// promotion is impossible.
-    pub static ref PROMOTE_TABLE: [[Option<PType>; 3]; 3] = [
-    // Dest:   String,              Float,                Int    // Src:
-              [  None,               None,               None ], // String
-              [  None,               None,               None ], // Float
-              [  None, Some(PType::Float),               None ]  // Int
-    ];
-}
+// lazy_static! {
+//     /// Promotion requirements for possible target types. `Some(...)` indicates that promotion is
+//     /// required for particular type, `None` indicates that either no promotion is required or that
+//     /// promotion is impossible.
+//     pub static ref PROMOTE_TABLE: [[Option<PType>; 3]; 3] = [
+//     // Dest:   String,              Float,                Int    // Src:
+//               [  None,               None,               None ], // String
+//               [  None,               None,               None ], // Float
+//               [  None, Some(PType::Float),               None ]  // Int
+//     ];
+// }
 
 impl InferPromotion for PType {
     fn infer_promotion(&self, dest_ty: PType) -> Option<PType> {
-        PROMOTE_TABLE[*self as usize][dest_ty as usize]
+        if self == &PType::Int && dest_ty == PType::Float {
+            Some(PType::Float)
+        } else {
+            None
+        }
+        // PROMOTE_TABLE[*self as usize][dest_ty as usize]
     }
 }

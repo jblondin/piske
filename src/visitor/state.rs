@@ -39,6 +39,8 @@ impl State {
             PType::Int));
         sc.define(Identifier("float".to_string()), Symbol::builtin(Identifier("float".to_string()),
             PType::Float));
+        sc.define(Identifier("bool".to_string()), Symbol::builtin(Identifier("bool".to_string()),
+            PType::Boolean));
         sc.define(Identifier("string".to_string()),
             Symbol::builtin(Identifier("string".to_string()), PType::String));
     }

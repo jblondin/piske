@@ -29,16 +29,4 @@ pub use symbol::Symbol;
 pub mod value;
 pub mod visitor;
 
-// // entry points
-// pub fn transpile_file(file: &str) {
-
-// }
-
-// pub fn transpile(src: &str) {
-
-// }
-
-// pub fn start_interp() {
-
-// }
-
+pub mod interpret;
