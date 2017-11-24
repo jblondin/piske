@@ -180,6 +180,8 @@ pub enum InfixOp {
 pub enum PostfixOp {
     /// Conjugation
     Conjugate,
+    /// Imaginary number
+    Imaginary,
 }
 
 /// Comparison operations

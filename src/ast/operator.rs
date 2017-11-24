@@ -83,6 +83,30 @@ impl BinaryOperator<PType, Value> for InfixOp {
                     _ => Err(format!("unable to interpret type '{}' as boolean", ty))
                 }
             }
+            PType::Complex => {
+                let (a, b) = left.extract_complex()?;
+                let (c, d) = right.extract_complex()?;
+                match *self {
+                    InfixOp::Add => Ok(Value::Complex(a + c, b + d)),
+                    InfixOp::Subtract => Ok(Value::Complex(a - c, b - d)),
+                    InfixOp::Multiply => Ok(Value::Complex(
+                        a * c - b * d,
+                        b * c + a * d
+                    )),
+                    InfixOp::Divide => {
+                        let denom = c * c + d * d;
+                        Ok(Value::Complex(
+                            (a * c + b * d) / denom,
+                            (b * c - a * d) / denom
+                        ))
+                    },
+                    InfixOp::Power => {
+                        Err("exponentiation of complex numbers currently unimplemented".to_string())
+                    },
+                    InfixOp::Comparison(_) => Err(
+                        "comparisons cannot be interpreted as complex".to_string())
+                }
+            }
             _ => Err(format!("infix operators invalid for type {}", ty))
         }
     }
@@ -117,15 +141,46 @@ impl UnaryOperator<PType, Value> for PostfixOp {
                 let operand = operand.extract_float()?;
                 match *self {
                     PostfixOp::Conjugate => Ok(Value::Float(1.0 / operand)),
+                    PostfixOp::Imaginary => Err(format!("invalid destination type '{}' for \
+                        imaginary operation", ty)),
                 }
             },
             PType::Int => {
                 let operand = operand.extract_int()?;
                 match *self {
                     PostfixOp::Conjugate => Ok(Value::Float(1.0 / (operand as f64))),
+                    PostfixOp::Imaginary => Err(format!("invalid destination type '{}' for \
+                        imaginary operation", ty)),
+                }
+            },
+            PType::Complex => {
+                match *self {
+                    PostfixOp::Conjugate => {
+                        match *operand {
+                            Value::Complex(re, im) => {
+                                Ok(Value::Complex(re, -im))
+                            },
+                            _ => {
+                                Err(format!("invalid value '{}' for conjugation with destination \
+                                    type '{}'", operand, ty))
+                            }
+                        }
+                    },
+                    PostfixOp::Imaginary => {
+                        match *operand {
+                            Value::Float(f) => Ok(Value::Complex(0.0, f)),
+                            Value::Int(i) => Ok(Value::Complex(0.0, i as f64)),
+                            _ => {
+                                Err(format!("unable to convert value of type '{}' to imaginary \
+                                    number", PType::from(operand)))
+                            }
+                        }
+                    },
+
                 }
             }
-            _ => Err(format!("prefix operators invalid for type {}", ty))
+            _ => Err(format!("postfix operator {} invalid for type {} on operand {}", self, ty,
+                    operand))
         }
     }
 }

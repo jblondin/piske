@@ -39,17 +39,6 @@ impl Typed<PType> for Annotation {
     fn set_promote_type(&mut self, ty: Option<PType>) { self.promote_ty = ty; }
 }
 
-// impl Scoped<SymbolScope<Symbol>> for Annotation {
-//     fn scope(&self) -> Option<Rc<RefCell<SymbolScope<Symbol>>>> {
-//         match self.sym_scope {
-//             Some(ref sc) => Some(Rc::clone(&sc)),
-//             None => None
-//         }
-//     }
-//     fn set_scope(&mut self, scope: Option<Rc<RefCell<SymbolScope<Symbol>>>>) {
-//         self.sym_scope = scope;
-//     }
-// }
 impl Scoped<MemoryScope<Symbol, Value>> for Annotation {
     fn scope(&self) -> Option<Rc<RefCell<MemoryScope<Symbol, Value>>>> {
         match self.scope {

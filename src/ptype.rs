@@ -14,6 +14,8 @@ pub enum PType {
     Int,
     /// Boolean (true / false)
     Boolean,
+    /// Complex
+    Complex,
     /// Set (collection)
     Set,
     /// Empty type
@@ -26,6 +28,7 @@ impl Type for PType {
             PType::Float => "float",
             PType::Int => "int",
             PType::Boolean => "bool",
+            PType::Complex => "complex",
             PType::Set => "set",
             PType::Void => "void",
         }

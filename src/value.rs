@@ -21,6 +21,8 @@ pub enum Value {
     Int(i64),
     /// Storage for a boolean,
     Boolean(bool),
+    /// Storage for a complex number,
+    Complex(f64, f64),
     /// Storage for a set
     Set(Box<ValueSet>),
     /// Indication of a value returned from a function
@@ -37,6 +39,8 @@ impl fmt::Display for Value {
             Value::Float(ref fl)  => write!(f, "{}", fl),
             Value::Int(ref i)     => write!(f, "{}", i),
             Value::Boolean(ref b) => write!(f, "{}", b),
+            Value::Complex(ref re, ref im)
+                                  => write!(f, "{}+{}i", re, im),
             Value::Set(ref s)     => write!(f, "{}", s),
             Value::Return(ref v)  => write!(f, "{}", *v),
             Value::Break(ref v)   => write!(f, "{}", *v),
@@ -64,6 +68,7 @@ impl<'a> From<&'a Value> for PType {
             Value::Float(_)       => PType::Float,
             Value::Int(_)         => PType::Int,
             Value::Boolean(_)     => PType::Boolean,
+            Value::Complex(_, _)  => PType::Complex,
             Value::Set(_)         => PType::Set,
             Value::Return(ref v)  => PType::from(v.as_ref()),
             Value::Break(ref v)   => PType::from(v.as_ref()),
@@ -81,6 +86,13 @@ impl Cast<PType> for Value {
                     _ => self
                 }
             },
+            PType::Complex => {
+                match self {
+                    Value::Int(i) => Value::Complex(i as f64, 0.0),
+                    Value::Float(f) => Value::Complex(f, 0.0),
+                    _ => self
+                }
+            }
             _ => self
         }
     }
@@ -157,6 +169,16 @@ impl Value {
         match *self {
             Value::Boolean(b) => Ok(b),
             _ => Err(format!("unable to extract boolean from type {}", PType::from(self)))
+        }
+    }
+    /// Extract a complex value from a Value.
+    ///
+    /// #Failures
+    /// Returns an 'Err' if the Value is not the right variant.
+    pub fn extract_complex(&self) -> Result<(f64, f64), String> {
+        match *self {
+            Value::Complex(re, im) => Ok((re, im)),
+            _ => Err(format!("unable to extract complex number from type {}", PType::from(self)))
         }
     }
 

@@ -41,6 +41,8 @@ impl State {
             PType::Float));
         sc.define(Identifier("bool".to_string()), Symbol::builtin(Identifier("bool".to_string()),
             PType::Boolean));
+        sc.define(Identifier("complex".to_string()),
+            Symbol::builtin(Identifier("complex".to_string()), PType::Boolean));
         sc.define(Identifier("string".to_string()),
             Symbol::builtin(Identifier("string".to_string()), PType::String));
     }

@@ -154,6 +154,7 @@ impl fmt::Display for PostfixOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
         match *self {
             PostfixOp::Conjugate => write!(f, "`"),
+            PostfixOp::Imaginary => write!(f, "i"),
         }
     }
 }

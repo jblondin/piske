@@ -81,6 +81,7 @@ type -> Node<Identifier>
 primitive_type -> Node<Identifier>
     = 'real' { Node::new(Identifier("real".to_string())) }
     / 'int' { Node::new(Identifier("int".to_string())) }
+    / 'complex' { Node::new(Identifier("complex".to_string())) }
     / 'bool' { Node::new(Identifier("bool".to_string())) }
 
 #[pub]
@@ -115,8 +116,14 @@ conjugated_atom -> Node<Expression>
         Node::new(Expression::Postfix { op: PostfixOp::Conjugate, left: Box::new(a) })
     }
 
+imaginary_atom -> Node<Expression>
+    = a:atom ws "i" {
+        Node::new(Expression::Postfix { op: PostfixOp::Imaginary, left: Box::new(a) })
+    }
+
 primary -> Node<Expression>
     = ws c:conjugated_atom ws { c }
+    / ws i:imaginary_atom ws { i }
     / ws a:atom ws { a }
 
 signed_primary -> Node<Expression>

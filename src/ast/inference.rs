@@ -1,6 +1,7 @@
 //! Implementation of inference and promotion traits for abstract syntax tree.
 
-use sindra::inference::{InferResultBinary, InferResultUnary, InferPromotion};
+use sindra::inference::{InferTypesBinary, BinaryOpTypes, InferTypesUnary, UnaryOpTypes,
+    InferPromotion};
 use ast::*;
 use PType;
 
@@ -8,31 +9,49 @@ lazy_static! {
     /// Result type definition for all arithmetic infix operations. `Some(...)` indicates that the
     /// operation is possible and has the given result type, `None` indicates that the operation
     /// is invalid on the supplied types.
-    pub static ref ARITH_RESULT_TABLE: [[Option<PType>; 4]; 4] = [
-    // Right:  String,              Float,                Int,   Boolean    // Left:
-              [  None,               None,               None,      None ], // String
-              [  None, Some(PType::Float), Some(PType::Float),      None ], // Float
-              [  None, Some(PType::Float),   Some(PType::Int),      None ], // Int
-              [  None,               None,               None,      None ]  // Boolean
+    pub static ref ARITH_RESULT_TABLE: [[Option<PType>; 7]; 7] = [
+        // String + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, None, None, None, None, None, None],
+        // Float + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, Some(PType::Float), Some(PType::Float), None, Some(PType::Complex), None, None],
+        // Int + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, Some(PType::Float), Some(PType::Int), None, Some(PType::Complex), None, None],
+        // Boolean + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, None, None, None, None, None, None],
+        // Complex + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, Some(PType::Complex), Some(PType::Complex), None, Some(PType::Complex), None, None],
+        // Set + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, None, None, None, None, None, None],
+        // Void + [String, Float, Int, Boolean, Complex, Set, Void]
+        [None, None, None, None, None, None, None],
     ];
 }
 
 lazy_static! {
     /// Table of comparable (via comparison operators; e.g. <, <=, >, >=) types. 'true' indicates
     /// the types are comparable, 'false' indicates they are not.
-    pub static ref COMPARABLE: [[bool; 4]; 4] = [
-    // Right:  String, Float,   Int, Boolean    // Left:
-              [  true, false, false,   false ], // String
-              [ false,  true,  true,   false ], // Float
-              [ false,  true,  true,   false ], // Int
-              [ false, false, false,    true ]  // Boolean
+    pub static ref COMPARABLE: [[bool; 7]; 7] = [
+        // String == [String, Float, Int, Boolean, Complex, Set, Void]
+        [true, false, false, false, false, false, false],
+        // Float == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, true, true, false, true, false, false],
+        // Int == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, true, true, false, true, false, false],
+        // Boolean == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, false, false, true, false, false, false],
+        // Complex == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, true, true, false, true, false, false],
+        // Set == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, false, false, false, false, true, false],
+        // Void == [String, Float, Int, Boolean, Complex, Set, Void]
+        [false, false, false, false, false, false, false],
     ];
 }
 
-impl InferResultBinary for InfixOp {
+impl InferTypesBinary for InfixOp {
     type Operand = PType;
 
-    fn infer_result_type(&self, left: PType, right: PType) -> Option<PType> {
+    fn infer_types(&self, left: PType, right: PType) -> Option<BinaryOpTypes<PType>> {
         match *self {
             InfixOp::Subtract | InfixOp::Multiply | InfixOp::Divide | InfixOp::Add => {
                 ARITH_RESULT_TABLE[left as usize][right as usize]
@@ -51,52 +70,56 @@ impl InferResultBinary for InfixOp {
                     None
                 }
             }
-
-        }
+        }.map(|t| BinaryOpTypes { result: t, left: t, right: t })
     }
 }
 
-impl InferResultUnary for PrefixOp {
+impl InferTypesUnary for PrefixOp {
     type Operand = PType;
 
-    fn infer_result_type(&self, operand: PType) -> Option<PType> {
+    fn infer_types(&self, operand: PType) -> Option<UnaryOpTypes<PType>> {
         match operand {
-            PType::Float | PType::Int => Some(operand),
+            PType::Float | PType::Int | PType::Complex => Some(operand),
             _ => None,
-        }
+        }.map(|t| UnaryOpTypes { result: t, operand: t })
     }
 }
 
-impl InferResultUnary for PostfixOp {
+impl InferTypesUnary for PostfixOp {
     type Operand = PType;
 
-    fn infer_result_type(&self, operand: PType) -> Option<PType> {
-        match operand {
-            PType::Float | PType::Int => Some(PType::Float),
-            _ => None,
+    fn infer_types(&self, operand: PType) -> Option<UnaryOpTypes<PType>> {
+        match *self {
+            PostfixOp::Conjugate => {
+                match operand {
+                    PType::Float | PType::Int => Some(PType::Float),
+                    PType::Complex => Some(PType::Complex),
+                    _ => None,
+                }.map(|t| UnaryOpTypes { result: t, operand: t })
+            },
+            PostfixOp::Imaginary => {
+                match operand {
+                    PType::Float | PType::Int => Some(UnaryOpTypes {
+                        result: PType::Complex,
+                        operand: operand
+                    }),
+                    _ => None
+                }
+            }
         }
     }
 }
-
-// lazy_static! {
-//     /// Promotion requirements for possible target types. `Some(...)` indicates that promotion is
-//     /// required for particular type, `None` indicates that either no promotion is required or that
-//     /// promotion is impossible.
-//     pub static ref PROMOTE_TABLE: [[Option<PType>; 3]; 3] = [
-//     // Dest:   String,              Float,                Int    // Src:
-//               [  None,               None,               None ], // String
-//               [  None,               None,               None ], // Float
-//               [  None, Some(PType::Float),               None ]  // Int
-//     ];
-// }
 
 impl InferPromotion for PType {
     fn infer_promotion(&self, dest_ty: PType) -> Option<PType> {
-        if self == &PType::Int && dest_ty == PType::Float {
-            Some(PType::Float)
-        } else {
-            None
+        match (self, dest_ty) {
+            (&PType::Int, PType::Float) => {
+                Some(PType::Float)
+            },
+            (&PType::Int, PType::Complex) | (&PType::Float, PType::Complex) => {
+                Some(PType::Complex)
+            },
+            _ => None
         }
-        // PROMOTE_TABLE[*self as usize][dest_ty as usize]
     }
 }

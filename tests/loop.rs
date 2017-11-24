@@ -65,7 +65,7 @@ fn test_break() {
     let prog = r#"
 let a = 0;
 let b = iterate i = [1, 10) {
-    a = a + i
+    a = a + i;
     i
 }
 b

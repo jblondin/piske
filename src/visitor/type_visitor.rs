@@ -8,7 +8,8 @@ use std::rc::Rc;
 
 use sindra::Typed;
 use sindra::scope::{Scoped, SymbolStore};
-use sindra::inference::{InferResultBinary, InferResultUnary, InferPromotion};
+use sindra::inference::{InferTypesBinary, BinaryOpTypes, InferTypesUnary, UnaryOpTypes,
+    InferPromotion};
 
 use ast::ast::*;
 
@@ -299,10 +300,12 @@ impl TypeComputationVisitor for Node<Expression> {
                 right.visit(state)?;
                 let tleft = left.annotation.borrow().ty().unwrap();
                 let tright = right.annotation.borrow().ty().unwrap();
-                match op.infer_result_type(tleft, tright) {
-                    Some(ty) => {
-                        left.annotation.borrow_mut().set_promote_type(tleft.infer_promotion(ty));
-                        right.annotation.borrow_mut().set_promote_type(tright.infer_promotion(ty));
+                match op.infer_types(tleft, tright) {
+                    Some(BinaryOpTypes { result: ty, left: promo_left, right: promo_right }) => {
+                        left.annotation.borrow_mut().set_promote_type(
+                            tleft.infer_promotion(promo_left));
+                        right.annotation.borrow_mut().set_promote_type(
+                            tright.infer_promotion(promo_right));
                         Some(ty)
                     },
                     None => {
@@ -316,10 +319,10 @@ impl TypeComputationVisitor for Node<Expression> {
             (&Expression::Prefix { ref right, ref op }, _) => {
                 right.visit(state)?;
                 let tright = right.annotation.borrow().ty().unwrap();
-                match op.infer_result_type(tright) {
-                    Some(result_ty) => {
+                match op.infer_types(tright) {
+                    Some(UnaryOpTypes { result: result_ty, operand: promo_ty }) => {
                         right.annotation.borrow_mut().set_promote_type(
-                            tright.infer_promotion(result_ty));
+                            tright.infer_promotion(promo_ty));
                         Some(result_ty)
                     },
                     None => {
@@ -332,10 +335,10 @@ impl TypeComputationVisitor for Node<Expression> {
             (&Expression::Postfix { ref left, ref op }, _) => {
                 left.visit(state)?;
                 let tleft = left.annotation.borrow().ty().unwrap();
-                match op.infer_result_type(tleft) {
-                    Some(result_ty) => {
+                match op.infer_types(tleft) {
+                    Some(UnaryOpTypes { result: result_ty, operand: promo_ty }) => {
                         left.annotation.borrow_mut().set_promote_type(
-                            tleft.infer_promotion(result_ty));
+                            tleft.infer_promotion(promo_ty));
                         Some(result_ty)
                     },
                     None => {
