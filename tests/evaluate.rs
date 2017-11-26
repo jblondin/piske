@@ -63,3 +63,12 @@ fn test_eval_conjugate() {
     let prog = r#"7.0`"#;
     assert_eq!(eval(prog), Ok(Value::Float(1.0 / 7.0)));
 }
+
+#[test]
+fn test_string() {
+    let prog = r#""hello""#;
+    assert_eq!(eval(prog), Ok(Value::String("hello".to_string())));
+
+    let prog = r#"let a = "hello"; a"#;
+    assert_eq!(eval(prog), Ok(Value::String("hello".to_string())));
+}

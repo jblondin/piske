@@ -1,7 +1,7 @@
 //! Standard library functions for piske.
 
 use std::collections::HashMap;
-use std::io::{self, Stdin, Stdout, Stderr, Write};
+use std::io::{self, Write, Read};
 
 use sindra::scope::SymbolStore;
 
@@ -20,8 +20,10 @@ pub enum ExtFuncIdent {
     GetImageHeight,
     /// get_image_width std function
     GetImageWidth,
-    /// print std function
-    Print
+    /// print integer std function
+    PrintInt,
+    /// print string std function
+    PrintString
 }
 
 struct Dims {
@@ -42,20 +44,20 @@ pub struct Environment {
     func_table: StdFuncTable,
     image_dims: Dims,
     #[allow(dead_code)]
-    stdin: Stdin,
+    stdin: Box<Read>,
     #[allow(dead_code)]
-    stdout: Stdout,
+    stdout: Box<Write>,
     #[allow(dead_code)]
-    stderr: Stderr,
+    stderr: Box<Write>,
 }
 impl Default for Environment {
     fn default() -> Environment {
         Environment {
             func_table: StdFuncTable::new(),
             image_dims: Dims::default(),
-            stdin: io::stdin(),
-            stdout: io::stdout(),
-            stderr: io::stderr(),
+            stdin: Box::new(io::stdin()),
+            stdout: Box::new(io::stdout()),
+            stderr: Box::new(io::stderr()),
         }
     }
 }
@@ -73,9 +75,23 @@ impl Environment {
             get_image_height, []);
         add_func!(scope, env.func_table, "get_image_width", ExtFuncIdent::GetImageWidth,
             get_image_width, []);
-        add_func!(scope, env.func_table, "print_int", ExtFuncIdent::Print, print_int,
+        add_func!(scope, env.func_table, "print_int", ExtFuncIdent::PrintInt, print_int,
             [("message", "int")]);
+        add_func!(scope, env.func_table, "print_string", ExtFuncIdent::PrintString, print_string,
+            [("message", "string")]);
         env
+    }
+    /// Change the `Write` object used for standard output
+    pub fn set_stdout<W: 'static + Write>(&mut self, out: W) {
+        self.stdout = Box::new(out);
+    }
+    /// Change the `Write` object used for standard error
+    pub fn set_stderr<W: 'static + Write>(&mut self, err: W) {
+        self.stderr = Box::new(err);
+    }
+    /// Change the `Read` object used for standard input
+    pub fn set_stdin<R: 'static + Read>(&mut self, input: R) {
+        self.stdin = Box::new(input);
     }
 }
 
@@ -94,6 +110,10 @@ define_func!(get_image_width, env, [], {
     Ok(Value::Int(env.image_dims.width as i64))
 });
 define_func!(print_int, env, [message: i64], {
+    writeln!(&mut env.stdout, "{}", message).unwrap();
+    Ok(Value::Empty)
+});
+define_func!(print_string, env, [message: String], {
     writeln!(&mut env.stdout, "{}", message).unwrap();
     Ok(Value::Empty)
 });

@@ -40,7 +40,7 @@ parameter -> Node<Parameter>
         ty: ty.clone() }) }
 
 declare_statement -> Node<Statement>
-    = kw_let ident:identifier ws "=" expr:expression ws (";" ws)? {
+    = kw_let ident:identifier ws "=" expr:expression_ws (";" ws)? {
         Node::new(Statement::Declare(ident, expr))
     }
 
@@ -94,7 +94,7 @@ expression_ws -> Node<Expression>
 
 #[pub]
 expression -> Node<Expression>
-    = i:identifier ws "(" ws pl:arg_list ws ")" {
+    = i:identifier ws "(" pl:arg_list ")" {
         Node::new(Expression::FnCall { name: i, args: pl })
     }
     / "{" ws b:block ws "}" { Node::new(Expression::Block(b)) }
