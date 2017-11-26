@@ -21,21 +21,6 @@ use visitor::State;
 
 type Result = ::std::result::Result<(), String>;
 
-/// Trait to provide easy entry point method to type computation visitor.
-pub trait ComputeTypes {
-    /// Type computation entry point method. Handles setting up the state and initiating the tree
-    /// walk.
-    fn compute_types(&self) -> Result;
-}
-impl ComputeTypes for Node<Program> {
-    fn compute_types(&self) -> Result {
-        let mut state = State::default();
-        let res = self.visit(&mut state);
-        state.logger.flush();
-        res
-    }
-}
-
 /// Trait for type computation visitor; implemented for all abstract syntax tree nodes.
 pub trait TypeComputationVisitor {
     /// Infer types, enforce type safety, and compute type promotion for this node, and visit any

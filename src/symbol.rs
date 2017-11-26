@@ -7,6 +7,7 @@ use sindra::node::Node;
 
 use ast::{Block, Parameter};
 use PType;
+use psk_std::ExtFuncIdent;
 
 /// Symbol object (for use in symbol tables).
 #[derive(Clone, Debug, PartialEq)]
@@ -34,10 +35,19 @@ pub enum Symbol {
         /// the computation)
         ret_ty: Option<PType>,
         /// Function Body
-        body: Node<Block>,
+        body: FunctionBody,
         /// Function parameters,
         params: Vec<Node<Parameter>>,
-    }
+    },
+}
+
+/// Function body types
+#[derive(Debug, Clone, PartialEq)]
+pub enum FunctionBody {
+    /// External (library) function
+    External(ExtFuncIdent),
+    /// Ast-defined block
+    Ast(Node<Block>),
 }
 
 impl Symbol {
@@ -54,11 +64,20 @@ impl Symbol {
         Symbol::Function {
             name: name,
             ret_ty: ty,
-            body: body,
+            body: FunctionBody::Ast(body),
             params: params,
         }
     }
-    /// Create a variable Symbol
+    /// Create a function Symbol, with specified type
+    pub fn ext_function(name: Identifier, ty: Option<PType>, body: ExtFuncIdent,
+            params: Vec<Node<Parameter>>) -> Symbol {
+        Symbol::Function {
+            name: name,
+            ret_ty: ty,
+            body: FunctionBody::External(body),
+            params: params,
+        }
+    }    /// Create a variable Symbol
     pub fn variable(name: Identifier, ty: Option<PType>) -> Symbol {
         Symbol::Variable {
             name: name,

@@ -1,9 +1,7 @@
 extern crate piske;
 
 use piske::parse::program;
-use piske::visitor::symbol::DefineSymbols;
-use piske::visitor::type_visitor::ComputeTypes;
-use piske::visitor::eval::Evaluate;
+use piske::visitor::{State, SymbolDefineVisitor, TypeComputationVisitor, EvaluateVisitor};
 
 use piske::value::Value;
 
@@ -18,9 +16,10 @@ add5(b)
     "#;
 
     let ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
-    assert_eq!(ast.eval(), Ok(Value::Int(10)));
+    let mut state = State::default();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    assert_eq!(EvaluateVisitor::visit(&ast, &mut state), Ok(Value::Int(10)));
 }
 
 #[test]
@@ -34,9 +33,10 @@ add(2, b)
     "#;
 
     let ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
-    assert_eq!(ast.eval(), Ok(Value::Float(7.0)));
+    let mut state = State::default();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    assert_eq!(EvaluateVisitor::visit(&ast, &mut state), Ok(Value::Float(7.0)));
 }
 
 #[test]
@@ -52,9 +52,10 @@ greater_than_five(6)
     "#;
 
     let ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
-    assert_eq!(ast.eval(), Ok(Value::Boolean(true)));
+    let mut state = State::default();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    assert_eq!(EvaluateVisitor::visit(&ast, &mut state), Ok(Value::Boolean(true)));
 
     let prog = r#"
 fn greater_than_five(a: int) -> bool {
@@ -67,8 +68,9 @@ greater_than_five(5)
     "#;
 
     let ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
-    assert_eq!(ast.eval(), Ok(Value::Boolean(false)));
+    let mut state = State::default();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    assert_eq!(EvaluateVisitor::visit(&ast, &mut state), Ok(Value::Boolean(false)));
 
 }

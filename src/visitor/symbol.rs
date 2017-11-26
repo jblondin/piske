@@ -14,20 +14,6 @@ use ast::ast::*;
 
 type Result = ::std::result::Result<(), String>;
 
-/// Trait to provide easy entry point method to symbol definition visitor.
-pub trait DefineSymbols {
-    /// Symbol definition entry point method. Handles setting up the state and initiating the tree
-    /// walk.
-    fn define_symbols(&self) -> Result;
-}
-impl DefineSymbols for Node<Program> {
-    fn define_symbols(&self) -> Result {
-        let mut state = State::default();
-        let res = self.visit(&mut state);
-        res
-    }
-}
-
 /// Trait for symbol definition visitor; implemented for all abstract syntax tree nodes.
 pub trait SymbolDefineVisitor {
     /// Verify and populate symbol table symbols for this node, and visit any children.
@@ -49,8 +35,6 @@ fn visit_block(block: &Node<Block>, state: &mut State) -> Result {
 
 impl SymbolDefineVisitor for Node<Program> {
     fn visit(&self, state: &mut State) -> Result {
-        // define builtins in top-level (global) scope
-        state.define_builtins();
         visit_block(&self.item.0, state)?;
         self.annotation.borrow_mut().set_scope(Some(Rc::clone(&state.scope)));
         Ok(())

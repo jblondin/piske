@@ -1,16 +1,15 @@
 extern crate piske;
 
 use piske::parse::program;
-use piske::visitor::symbol::DefineSymbols;
-use piske::visitor::type_visitor::ComputeTypes;
-use piske::visitor::eval::Evaluate;
+use piske::visitor::{State, SymbolDefineVisitor, TypeComputationVisitor, EvaluateVisitor};
 use piske::value::Value;
 
 fn expect_prog(prog: &str, val: Value) {
     let ast = program(prog).unwrap();
-    ast.define_symbols().unwrap();
-    ast.compute_types().unwrap();
-    let evaluated = ast.eval();
+    let mut state = State::default();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    let evaluated = EvaluateVisitor::visit(&ast, &mut state);
     assert_eq!(evaluated, Ok(val));
 }
 

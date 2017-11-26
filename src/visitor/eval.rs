@@ -14,23 +14,11 @@ use sindra::value::Coerce;
 
 use ast::*;
 use Symbol;
+use symbol::FunctionBody;
 use value::{Value, ValueSet, SetInterval};
 use visitor::State;
 
 type Result = ::std::result::Result<Value, String>;
-
-/// Trait to provide easy entry point method to evaluation visitor.
-pub trait Evaluate {
-    /// Evaluate entry point method. Handles setting up the state and initiating the tree walk.
-    fn eval(&self) -> Result;
-}
-impl Evaluate for Node<Program> {
-    fn eval(&self) -> Result {
-        let mut state = State::default();
-        let res = self.visit(&mut state);
-        res
-    }
-}
 
 /// Trait for evaluation visitor; implemented for all abstract syntax tree nodes.
 pub trait EvaluateVisitor {
@@ -161,7 +149,8 @@ impl EvaluateVisitor for Node<Expression> {
                     "symbol not found: '{}'", name.item))?;
 
                 match sym {
-                    Symbol::Function { ref name, ref body, ref params, .. } => {
+                    Symbol::Function { ref name, body: FunctionBody::Ast(ref body),
+                            ref params, .. } => {
                         let fn_scope = body.annotation.borrow().scope().ok_or(
                             format!("missing function scope for function \
                                 '{}'", name)
@@ -188,7 +177,10 @@ impl EvaluateVisitor for Node<Expression> {
                         state.scope = Rc::clone(&prev_scope);
                         // return result
                         Ok(val)
-                    }
+                    },
+                    Symbol::Function { body: FunctionBody::External(ext_func_id), .. } => {
+                        state.std_env.call(ext_func_id, evaluated_args)
+                    },
                     _ => Err(format!("unable to call symbol '{}' as function", name.item))
                 }
             }

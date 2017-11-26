@@ -5,7 +5,7 @@ use std::ops::Add;
 use std::cmp::Ordering;
 
 use sindra;
-use sindra::value::{Coerce, Cast};
+use sindra::value::{Coerce, Cast, Extract};
 
 use ast::Literal;
 use PType;
@@ -188,6 +188,39 @@ impl Value {
         PType::from(self) == PType::from(other)
     }
 }
+
+impl Extract<u64> for Value {
+    fn extract(&self) -> Result<u64, String> {
+        match *self {
+            Value::Int(i) => {
+                Ok(i as u64)
+            },
+            _ => Err(format!("unable to extract unsigned int from type {}", PType::from(self)))
+        }
+    }
+}
+impl Extract<i64> for Value {
+    fn extract(&self) -> Result<i64, String> {
+        match *self {
+            Value::Int(i) => {
+                Ok(i)
+            },
+            _ => Err(format!("unable to extract int from type {}", PType::from(self)))
+        }
+    }
+}
+impl Extract<String> for Value {
+    fn extract(&self) -> Result<String, String> {
+        match *self {
+            Value::String(ref s) => {
+                Ok(s.clone())
+            },
+            _ => Err(format!("unable to extract string from type {}", PType::from(self)))
+        }
+    }
+}
+
+
 
 /// Value type for sets
 #[derive(Debug, Clone, PartialEq)]
