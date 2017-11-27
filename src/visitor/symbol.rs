@@ -112,6 +112,12 @@ impl SymbolDefineVisitor for Node<Statement> {
             Statement::Return(ref expr) | Statement::Break(ref expr) => {
                 expr.visit(state)?;
                 Ok(())
+            },
+            Statement::Print(ref exprs) => {
+                for expr in exprs {
+                    expr.visit(state)?;
+                }
+                Ok(())
             }
         }
     }

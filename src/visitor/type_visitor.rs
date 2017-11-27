@@ -242,6 +242,12 @@ impl TypeComputationVisitor for Node<Statement> {
             (&Statement::Return(ref expr), _) | (&Statement::Break(ref expr), _) => {
                 expr.visit(state)?;
                 expr.annotation.borrow().ty()
+            },
+            (&Statement::Print(ref exprs), _)  => {
+                for expr in exprs {
+                    expr.visit(state)?;
+                }
+                Some(PType::Void)
             }
         };
         self.annotation.borrow_mut().set_type(ty);

@@ -45,6 +45,19 @@ impl fmt::Display for Statement {
             },
             Statement::Return(ref expr) => write!(f, "return({})", expr.item),
             Statement::Break(ref expr) => write!(f, "break({})", expr.item),
+            Statement::Print(ref exprs) => {
+                let mut out = "print(".to_string();
+                let mut first = true;
+                for expr in exprs {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(&mut out, ",")?;
+                    }
+                    write!(&mut out, "{}", expr.item)?;
+                }
+                write!(f, "{})", out)
+            }
         }
     }
 }

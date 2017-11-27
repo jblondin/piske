@@ -32,6 +32,8 @@ pub enum Statement {
     Return(Node<Expression>),
     /// Break statement.
     Break(Node<Expression>),
+    /// Print statement.
+    Print(Vec<Node<Expression>>),
 }
 annotate!(Statement, Annotation);
 

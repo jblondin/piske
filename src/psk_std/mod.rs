@@ -20,10 +20,6 @@ pub enum ExtFuncIdent {
     GetImageHeight,
     /// get_image_width std function
     GetImageWidth,
-    /// print integer std function
-    PrintInt,
-    /// print string std function
-    PrintString
 }
 
 struct Dims {
@@ -43,12 +39,12 @@ impl Default for Dims {
 pub struct Environment {
     func_table: StdFuncTable,
     image_dims: Dims,
-    #[allow(dead_code)]
-    stdin: Box<Read>,
-    #[allow(dead_code)]
-    stdout: Box<Write>,
-    #[allow(dead_code)]
-    stderr: Box<Write>,
+    /// Standard environment standard input
+    pub stdin: Box<Read>,
+    /// Standard environment standard output
+    pub stdout: Box<Write>,
+    /// Standard environment standard error
+    pub stderr: Box<Write>,
 }
 impl Default for Environment {
     fn default() -> Environment {
@@ -75,10 +71,6 @@ impl Environment {
             get_image_height, []);
         add_func!(scope, env.func_table, "get_image_width", ExtFuncIdent::GetImageWidth,
             get_image_width, []);
-        add_func!(scope, env.func_table, "print_int", ExtFuncIdent::PrintInt, print_int,
-            [("message", "int")]);
-        add_func!(scope, env.func_table, "print_string", ExtFuncIdent::PrintString, print_string,
-            [("message", "string")]);
         env
     }
     /// Change the `Write` object used for standard output
@@ -108,12 +100,4 @@ define_func!(get_image_height, env, [], {
 });
 define_func!(get_image_width, env, [], {
     Ok(Value::Int(env.image_dims.width as i64))
-});
-define_func!(print_int, env, [message: i64], {
-    writeln!(&mut env.stdout, "{}", message).unwrap();
-    Ok(Value::Empty)
-});
-define_func!(print_string, env, [message: String], {
-    writeln!(&mut env.stdout, "{}", message).unwrap();
-    Ok(Value::Empty)
 });

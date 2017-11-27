@@ -79,9 +79,17 @@ impl EvaluateVisitor for Node<Statement> {
             },
             (&Statement::Return(ref expr), _) => {
                 Ok(Value::Return(Box::new(expr.visit(state)?)))
-            }
+            },
             (&Statement::Break(ref expr), _) => {
                 Ok(Value::Break(Box::new(expr.visit(state)?)))
+            },
+            (&Statement::Print(ref exprs), _) => {
+                for expr in exprs {
+                    let value = expr.visit(state)?;
+                    write!(&mut state.std_env.stdout, "{}", value).unwrap();
+                }
+                writeln!(&mut state.std_env.stdout, "").unwrap();
+                Ok(Value::Empty)
             }
         }
     }

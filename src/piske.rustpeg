@@ -20,6 +20,7 @@ statement -> Node<Statement>
     / fn_define_statement
     / return_statement
     / break_statement
+    / print_statement
     / expr:expression ws ";"? ws { Node::new(Statement::Expression(expr)) }
 
 fn_define_statement -> Node<Statement>
@@ -59,6 +60,14 @@ break_statement -> Node<Statement>
         Node::new(Statement::Break(expr))
     }
 
+print_statement -> Node<Statement>
+    = kw_print exprs:expressions (";" ws)? {
+        Node::new(Statement::Print(exprs))
+    }
+
+expressions -> Vec<Node<Expression>>
+    = expression_ws**","
+
 keyword<k> = k !@"\p{XID_Continue}"@ ws
 kw_let = keyword<"let">
 kw_fn = keyword<"fn">
@@ -71,9 +80,10 @@ kw_iterate = keyword<"iterate">
 kw_over = keyword<"over">
 kw_return = keyword<"return">
 kw_break = keyword<"break">
+kw_print = keyword<"print">
 
 kw = kw_let / kw_global / kw_fn / kw_if / kw_else / kw_true / kw_false / kw_iterate / kw_over
-    / kw_return / kw_break;
+    / kw_return / kw_break / kw_print;
 
 type -> Node<Identifier>
     = primitive_type / identifier
