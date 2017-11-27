@@ -86,9 +86,9 @@ impl EvaluateVisitor for Node<Statement> {
             (&Statement::Print(ref exprs), _) => {
                 for expr in exprs {
                     let value = expr.visit(state)?;
-                    write!(&mut state.std_env.stdout, "{}", value).unwrap();
+                    write!(&mut state.io.stdout(), "{}", value).unwrap();
                 }
-                writeln!(&mut state.std_env.stdout, "").unwrap();
+                writeln!(&mut state.io.stdout(), "").unwrap();
                 Ok(Value::Empty)
             }
         }

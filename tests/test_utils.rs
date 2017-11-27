@@ -37,6 +37,6 @@ pub fn new_state_with_temp_output() -> (State, File) {
     let mut state = State::default();
     let tempfile = tempfile::tempfile().unwrap();
     let temp_clone = tempfile.try_clone().unwrap();
-    state.std_env.set_stdout(tempfile);
+    state.io.set_stdout(tempfile);
     (state, temp_clone)
 }

@@ -1,7 +1,6 @@
 //! Standard library functions for piske.
 
 use std::collections::HashMap;
-use std::io::{self, Write, Read};
 
 use sindra::scope::SymbolStore;
 
@@ -39,21 +38,12 @@ impl Default for Dims {
 pub struct Environment {
     func_table: StdFuncTable,
     image_dims: Dims,
-    /// Standard environment standard input
-    pub stdin: Box<Read>,
-    /// Standard environment standard output
-    pub stdout: Box<Write>,
-    /// Standard environment standard error
-    pub stderr: Box<Write>,
 }
 impl Default for Environment {
     fn default() -> Environment {
         Environment {
             func_table: StdFuncTable::new(),
             image_dims: Dims::default(),
-            stdin: Box::new(io::stdin()),
-            stdout: Box::new(io::stdout()),
-            stderr: Box::new(io::stderr()),
         }
     }
 }
@@ -72,18 +62,6 @@ impl Environment {
         add_func!(scope, env.func_table, "get_image_width", ExtFuncIdent::GetImageWidth,
             get_image_width, []);
         env
-    }
-    /// Change the `Write` object used for standard output
-    pub fn set_stdout<W: 'static + Write>(&mut self, out: W) {
-        self.stdout = Box::new(out);
-    }
-    /// Change the `Write` object used for standard error
-    pub fn set_stderr<W: 'static + Write>(&mut self, err: W) {
-        self.stderr = Box::new(err);
-    }
-    /// Change the `Read` object used for standard input
-    pub fn set_stdin<R: 'static + Read>(&mut self, input: R) {
-        self.stdin = Box::new(input);
     }
 }
 
