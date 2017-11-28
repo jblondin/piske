@@ -5,6 +5,8 @@
 #[macro_use] extern crate lazy_static;
 
 extern crate regex;
+extern crate image;
+
 #[macro_use] extern crate sindra;
 
 pub mod ast;

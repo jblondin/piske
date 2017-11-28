@@ -199,6 +199,16 @@ impl Extract<u64> for Value {
         }
     }
 }
+impl Extract<usize> for Value {
+    fn extract(&self) -> Result<usize, String> {
+        match *self {
+            Value::Int(i) => {
+                Ok(i as usize)
+            },
+            _ => Err(format!("unable to extract unsigned int from type {}", PType::from(self)))
+        }
+    }
+}
 impl Extract<i64> for Value {
     fn extract(&self) -> Result<i64, String> {
         match *self {
@@ -219,7 +229,26 @@ impl Extract<String> for Value {
         }
     }
 }
-
+impl Extract<f64> for Value {
+    fn extract(&self) -> Result<f64, String> {
+        match *self {
+            Value::Float(f) => {
+                Ok(f)
+            },
+            _ => Err(format!("unable to extract float from type {}", PType::from(self)))
+        }
+    }
+}
+impl Extract<(f64, f64)> for Value {
+    fn extract(&self) -> Result<(f64, f64), String> {
+        match *self {
+            Value::Complex(re, im) => {
+                Ok((re, im))
+            },
+            _ => Err(format!("unable to extract float tuple from type {}", PType::from(self)))
+        }
+    }
+}
 
 
 /// Value type for sets

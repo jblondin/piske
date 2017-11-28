@@ -1,7 +1,11 @@
 #[macro_export]
 macro_rules! define_func {
     ($name:ident, $env_name:ident, [$($vname:ident: $vtype:ty),*], $body:block) => {
+        #[allow(unused_variables)]
         fn $name($env_name: &mut Environment, args: Vec<Value>) -> Result<Value, String> {
+            #[allow(unused_imports)]
+            use sindra::value::Extract;
+
             #[allow(unused_mut)]
             let mut arg_count = 0;
             $(
