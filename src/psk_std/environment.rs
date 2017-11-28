@@ -22,7 +22,11 @@ pub enum ExtFuncIdent {
     /// set_pixel_data std function
     SetPixelData,
     /// project std function
-    Project
+    Project,
+    /// re std function
+    Re,
+    /// im std function
+    Im
 }
 
 /// Piske standard environment
@@ -63,6 +67,10 @@ impl Environment {
         add_func!(scope, env.func_table, "project", ExtFuncIdent::Project, project,
             [("row", "int"), ("col", "int"), ("center", "complex"), ("size", "complex")],
             PType::Complex);
+        add_func!(scope, env.func_table, "re", ExtFuncIdent::Re, re, [("c", "complex")],
+            PType::Float);
+        add_func!(scope, env.func_table, "im", ExtFuncIdent::Im, im, [("c", "complex")],
+            PType::Float);
         env
     }
 }
@@ -116,4 +124,9 @@ define_func!(project, env, [row: usize, col: usize, center: (f64, f64), size: (f
     let im = (col as f64 / cols as f64 - 0.5) * size.1 + center.1;
     Ok(Value::Complex(re, im))
 });
-
+define_func!(re, env, [c: (f64, f64)], {
+    Ok(Value::Float(c.0))
+});
+define_func!(im, env, [c: (f64, f64)], {
+    Ok(Value::Float(c.1))
+});

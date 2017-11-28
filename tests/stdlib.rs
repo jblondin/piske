@@ -38,3 +38,9 @@ z
     expect_prog(prog, Value::Complex(-1.0, 1.0));
 
 }
+
+#[test]
+fn test_complex_extraction() {
+    expect_prog(r"re(1+0i)", Value::Float(1.0));
+    expect_prog(r"im(1+0i)", Value::Float(0.0));
+}
