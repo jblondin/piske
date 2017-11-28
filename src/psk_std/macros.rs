@@ -24,7 +24,7 @@ macro_rules! define_func {
 #[macro_export]
 macro_rules! add_func {
     ($scope:expr, $table:expr, $name:expr, $key:expr, $fn:ident,
-            [$(($pname:expr, $ptype:expr)),*]) => {{
+            [$(($pname:expr, $ptype:expr)),*], $ret_ty:expr) => {{
         #[allow(unused_imports)]
         use ast::Parameter;
         use sindra::Identifier;
@@ -42,7 +42,7 @@ macro_rules! add_func {
             }));
         )*
         $scope.define(ident.clone(), Symbol::ext_function(
-            ident.clone(), Some(PType::Void), $key, params));
+            ident.clone(), Some($ret_ty), $key, params));
         $table.insert($key, Box::new($fn));
     }}
 }

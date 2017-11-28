@@ -81,3 +81,14 @@ fn test_conjugate() {
     expect_prog(r#"(1 + 2i)`"#, Value::Complex(1.0, -2.0));
     expect_prog(r#"1 + (2i)`"#, Value::Complex(1.0, -2.0));
 }
+
+#[test]
+fn test_complex_assign() {
+    let prog = r#"
+let z = 0 + 0i;
+let c = 0.5 + 0.5i;
+z = z * z + c;
+z
+    "#;
+    expect_prog(prog, Value::Complex(0.5, 0.5));
+}

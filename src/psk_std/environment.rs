@@ -51,16 +51,18 @@ impl Environment {
     pub fn new<Sc: SymbolStore<Symbol>>(scope: &mut Sc) -> Environment {
         let mut env = Environment::default();
         add_func!(scope, env.func_table, "set_image_dims", ExtFuncIdent::SetImageDims,
-            set_image_dims, [("height", "int"), ("width", "int")]);
+            set_image_dims, [("height", "int"), ("width", "int")], PType::Void);
         add_func!(scope, env.func_table, "get_image_height", ExtFuncIdent::GetImageHeight,
-            get_image_height, []);
+            get_image_height, [], PType::Int);
         add_func!(scope, env.func_table, "get_image_width", ExtFuncIdent::GetImageWidth,
-            get_image_width, []);
-        add_func!(scope, env.func_table, "write", ExtFuncIdent::Write, write, [("file", "string")]);
+            get_image_width, [], PType::Int);
+        add_func!(scope, env.func_table, "write", ExtFuncIdent::Write, write, [("file", "string")],
+            PType::Void);
         add_func!(scope, env.func_table, "set_pixel_data", ExtFuncIdent::SetPixelData,
-            set_pixel_data, [("row", "int"), ("col", "int"), ("value", "float")]);
+            set_pixel_data, [("row", "int"), ("col", "int"), ("value", "float")], PType::Void);
         add_func!(scope, env.func_table, "project", ExtFuncIdent::Project, project,
-            [("row", "int"), ("col", "int"), ("center", "complex"), ("size", "complex")]);
+            [("row", "int"), ("col", "int"), ("center", "complex"), ("size", "complex")],
+            PType::Complex);
         env
     }
 }
