@@ -227,11 +227,14 @@ impl EvaluateVisitor for Node<Expression> {
                         return Err(
                             "missing scope when trying to evaluate loop".to_string());
                     }
-                    val = match body.visit(state)? {
+                    match body.visit(state)? {
                         Value::Break(returned_val) => {
-                            *returned_val
+                            val = *returned_val;
+                            break;
                         },
-                        v => v
+                        v => {
+                            val = v;
+                        }
                     }
                 }
                 Ok(val)
