@@ -21,3 +21,20 @@ get_image_width()
     "#;
     expect_prog(prog, Value::Int(60));
 }
+
+#[test]
+fn test_project() {
+    expect_prog(r#"project(1024, 512, 0+0i, 2+2i)"#, Value::Complex(1.0, 0.0));
+    expect_prog(r#"project(512 + 256, 512 + 256, 0+0i, 2+2i)"#, Value::Complex(0.5, 0.5));
+    expect_prog(r#"project(256, 512 + 256, 0+0i, 2+2i)"#, Value::Complex(-0.5, 0.5));
+    expect_prog(r#"project(512 + 256, 256, 0+0i, 2+2i)"#, Value::Complex(0.5, -0.5));
+
+    let prog = r#"
+let z = 0+0i;
+let c = project(0, 1024, 0+0i, 2+2i);
+z = z * z + c;
+z
+    "#;
+    expect_prog(prog, Value::Complex(-1.0, 1.0));
+
+}

@@ -112,8 +112,8 @@ define_func!(write, env, [filename: String], {
 });
 define_func!(project, env, [row: usize, col: usize, center: (f64, f64), size: (f64, f64)], {
     let &Dims { rows, cols } = env.image_data.get_dims();
-    let re = (row as f64 / rows as f64 - 0.5) / size.0 + center.0;
-    let im = (col as f64 / cols as f64 - 0.5) / size.1 + center.1;
+    let re = (row as f64 / rows as f64 - 0.5) * size.0 + center.0;
+    let im = (col as f64 / cols as f64 - 0.5) * size.1 + center.1;
     Ok(Value::Complex(re, im))
 });
 
