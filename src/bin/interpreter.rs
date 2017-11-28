@@ -11,9 +11,7 @@ fn interpret_file(file_name: &str) {
             match file.read_to_string(&mut source) {
                 Ok(_) => {
                     match piske::interpret::interpret(&source) {
-                        Ok(val) => {
-                            writeln!(::std::io::stdout(), "{}", val).unwrap();
-                        },
+                        Ok(_) => {},
                         Err(e) => {
                             writeln!(::std::io::stderr(), "interpreting failed: {}", e).unwrap();
                             ::std::process::exit(1);
