@@ -10,6 +10,7 @@ use value::Value;
 
 use sindra::{Type, Typed, Identifier};
 use sindra::scope::{Scope, Scoped, MemoryScope, SymbolStore, MemoryStore};
+use sindra::value::Coerce;
 
 /// Annotation type for piske abstract syntax tree. Contains a symbol scope, memory scope,
 /// and typing information.
@@ -37,6 +38,7 @@ impl Typed<PType> for Annotation {
     fn set_type(&mut self, ty: Option<PType>) { self.ty = ty; }
     fn promote_type(&self) -> Option<PType> { self.promote_ty.clone() }
     fn set_promote_type(&mut self, ty: Option<PType>) { self.promote_ty = ty; }
+    fn promoted(&self) -> Option<PType> { self.ty().map(|ty| ty.coerce(self.promote_type())) }
 }
 
 impl Scoped<MemoryScope<Symbol, Value>> for Annotation {

@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate quote;
 
 extern crate regex;
 extern crate image;

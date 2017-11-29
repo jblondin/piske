@@ -97,9 +97,39 @@ impl Cast<PType> for Value {
         }
     }
 }
+impl Cast<PType> for PType {
+    fn cast(self, dest_ty: PType) -> PType {
+        match dest_ty {
+            PType::Float => {
+                match self {
+                    PType::Int => PType::Float,
+                    _ => self
+                }
+            },
+            PType::Complex => {
+                match self {
+                    PType::Int => PType::Complex,
+                    PType::Float => PType::Complex,
+                    _ => self
+                }
+            },
+            _ => self
+        }
+    }
+}
 
 impl Coerce<PType> for Value {
     fn coerce(self, dest_ty: Option<PType>) -> Value {
+        match dest_ty {
+            Some(dest) => {
+                self.cast(dest)
+            },
+            None => self
+        }
+    }
+}
+impl Coerce<PType> for PType {
+    fn coerce(self, dest_ty: Option<PType>) -> PType {
         match dest_ty {
             Some(dest) => {
                 self.cast(dest)

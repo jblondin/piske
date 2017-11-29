@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate tempfile;
 extern crate piske;
 
@@ -5,9 +7,9 @@ use std::fs::File;
 
 use piske::value::Value;
 use piske::parse::program;
-use piske::visitor::{State, SymbolDefineVisitor, TypeComputationVisitor, EvaluateVisitor};
+use piske::visitor::{State, SymbolDefineVisitor, TypeComputationVisitor, EvaluateVisitor,
+    TranspileVisitor};
 
-#[allow(dead_code)]
 pub fn expect_prog_with_state(prog: &str, val: Value, mut state: &mut State) {
     let ast = program(prog).unwrap();
     SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
@@ -16,13 +18,20 @@ pub fn expect_prog_with_state(prog: &str, val: Value, mut state: &mut State) {
     assert_eq!(evaluated, Ok(val));
 }
 
-#[allow(dead_code)]
 pub fn expect_prog(prog: &str, val: Value) {
     let mut state = State::default();
     expect_prog_with_state(prog, val, &mut state);
 }
 
-#[allow(dead_code)]
+pub fn examine_translated_source(prog: &str) {
+    let mut state = State::default();
+    let ast = program(prog).unwrap();
+    SymbolDefineVisitor::visit(&ast, &mut state).unwrap();
+    TypeComputationVisitor::visit(&ast, &mut state).unwrap();
+    let translated = TranspileVisitor::visit(&ast, &mut state).unwrap();
+    println!("{}", translated.as_str());
+}
+
 pub fn test_output(mut file: &File, expected: &str) {
     use std::io::{Read, Seek, SeekFrom};
 
@@ -32,7 +41,6 @@ pub fn test_output(mut file: &File, expected: &str) {
     assert_eq!(&buffer, expected);
 }
 
-#[allow(dead_code)]
 pub fn new_state_with_temp_output() -> (State, File) {
     let mut state = State::default();
     let tempfile = tempfile::tempfile().unwrap();
