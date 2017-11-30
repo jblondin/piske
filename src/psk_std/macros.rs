@@ -27,7 +27,8 @@ macro_rules! add_func {
             [$(($pname:expr, $ptype:expr)),*], $ret_ty:expr) => {{
         #[allow(unused_imports)]
         use ast::Parameter;
-        use sindra::Identifier;
+        #[allow(unused_imports)]
+        use sindra::{Typed, Identifier};
         #[allow(unused_imports)]
         use sindra::node::Node;
         use PType;
@@ -36,10 +37,12 @@ macro_rules! add_func {
         #[allow(unused_mut)]
         let mut params = vec![];
         $(
-            params.push(Node::new(Parameter {
+            let node = Node::new(Parameter {
                 name: Node::new(Identifier($pname.to_string())),
                 ty: Node::new(Identifier($ptype.to_string()))
-            }));
+            });
+            node.annotation.borrow_mut().set_type(Some(PType::from($ptype)));
+            params.push(node);
         )*
         $scope.define(ident.clone(), Symbol::ext_function(
             ident.clone(), Some($ret_ty), $key, params));

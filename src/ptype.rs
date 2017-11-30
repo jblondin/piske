@@ -34,6 +34,19 @@ impl Type for PType {
         }
     }
 }
+impl<'a> From<&'a str> for PType {
+    fn from(s: &'a str) -> PType {
+        match s {
+            "string" => PType::String,
+            "float" => PType::Float,
+            "int" => PType::Int,
+            "bool" => PType::Boolean,
+            "complex" => PType::Complex,
+            "set" => PType::Set,
+            _ => PType::Void,
+        }
+    }
+}
 
 impl fmt::Display for PType {
     fn fmt(&self, f: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {

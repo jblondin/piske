@@ -167,8 +167,11 @@ impl TypeComputationVisitor for Node<Statement> {
                             param_ty, param_name));
                         None
                     };
+                    // re-declare parameter as a variable with computed type in the funciton scope
                     fn_scope.borrow_mut().define(param_name.clone(),
                         Symbol::variable(param_name.clone(), pm_ty));
+                    // set the parameter type
+                    param.annotation.borrow_mut().set_type(pm_ty);
                 }
 
                 body.visit(state)?;
@@ -344,31 +347,54 @@ impl TypeComputationVisitor for Node<Expression> {
                 block.annotation.borrow().ty()
             },
             (&Expression::FnCall { name: ref ident, ref args }, _) => {
-                for ref mut arg in args.iter() {
+                for ref arg in args.iter() {
                     arg.visit(state)?;
                 }
                 let id = &ident.item;
                 match scope.borrow().resolve(&id) {
-                    Some(ref sym) => {
-                        match *sym {
-                            Symbol::Variable { .. } => {
-                                state.logger.error(format!(
-                                    "attempt to call function on variable {}", id));
-                                None
-                            },
-                            Symbol::Function { ret_ty, ref name, .. } => {
-                                if ret_ty.is_none() {
-                                    state.logger.error(format!(
-                                        "function '{}' does not have a valid return type", name));
+                    Some(Symbol::Variable { .. }) => {
+                        state.logger.error(format!(
+                            "attempt to call function on variable {}", id));
+                        None
+                    },
+                    Some(Symbol::Function { ret_ty, ref name, ref params, .. }) => {
+                        if args.len() != params.len() {
+                            state.logger.error(format!("function '{}' expects {} arguments,
+                                {} found", name, params.len(), args.len()));
+                            None
+                        } else {
+                            // check the parameter types
+                            for (ref param, ref arg) in params.iter().zip(args) {
+                                println!("trying func {} param {}", name, param.item);
+                                let arg_ty = arg.annotation.borrow().ty().unwrap();
+                                let param_ty = param.annotation.borrow().ty().unwrap();
+
+                                if param_ty != arg_ty {
+                                    match arg_ty.infer_promotion(param_ty) {
+                                        Some(promoted) => {
+                                            arg.annotation.borrow_mut().set_promote_type(
+                                                Some(promoted));
+                                        },
+                                        None => {
+                                            state.logger.error(format!(
+                                                "invalid argument type for parameter '{}' \
+                                                of function '{}': expected '{}', found '{}'",
+                                                param.item.name.item, name, param_ty, arg_ty));
+                                        }
+                                    }
                                 }
-                                ret_ty
-                            },
-                            Symbol::BuiltinType { .. } => {
+                            }
+                            if ret_ty.is_none() {
                                 state.logger.error(format!(
-                                    "attempt to call function on built-in type {}", id));
-                                None
-                            },
+                                    "function '{}' does not have a valid return type", name));
+                            }
+                            ret_ty
                         }
+                    },
+                    Some(Symbol::BuiltinType { .. }) => {
+                        state.logger.error(format!(
+                            "attempt to call function on built-in type {}", id));
+                        None
                     },
                     None => {
                         return Err(format!("function '{}' does not exist", id));

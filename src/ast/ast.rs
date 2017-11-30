@@ -58,7 +58,7 @@ pub struct Parameter {
     /// Parameter variable type.
     pub ty: Node<Identifier>,
 }
-annotate!(Parameter);
+annotate!(Parameter, Annotation);
 
 /// Valid expressions in the piske programming language.
 #[derive(Debug, Clone, PartialEq)]
