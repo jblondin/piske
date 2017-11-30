@@ -149,7 +149,7 @@ impl TypeComputationVisitor for Node<Statement> {
                     let pm_ty = if let Some(param_ty_sym) = fn_scope.borrow().resolve(&param_ty) {
                         match param_ty_sym {
                             Symbol::Variable { .. } => {
-                                state.logger.error(format!("variable '{}'borrow(). not valid as type \
+                                state.logger.error(format!("variable '{}' not valid as type \
                                     for parameter '{}'", param_ty, param_name));
                                 None
                             },
