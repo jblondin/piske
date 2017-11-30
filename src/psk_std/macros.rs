@@ -1,22 +1,29 @@
+macro_rules! count_args {
+    () => { 0 };
+    ($_e:ty $(, $rest:ty)*) => { 1 + count_args!($($rest),*) }
+}
+
 #[macro_export]
-macro_rules! define_func {
-    ($name:ident, $env_name:ident, [$($vname:ident: $vtype:ty),*], $body:block) => {
+macro_rules! add_interpreter_func {
+    ($intrp_fn_name:ident, $fn_name:ident, [$($vtype:ty),*], $result_map:expr) => {
         #[allow(unused_variables)]
-        fn $name($env_name: &mut Environment, args: Vec<Value>) -> Result<Value, String> {
+        fn $intrp_fn_name(env: &mut Environment, args: Vec<Value>) -> Result<Value, String> {
             #[allow(unused_imports)]
             use sindra::value::Extract;
-
-            #[allow(unused_mut)]
-            let mut arg_count = 0;
-            $(
-                let $vname: $vtype = args[arg_count].extract()?;
-                arg_count += 1;
-            )*
+            let arg_count = count_args!($($vtype),*);
             if args.len() != arg_count {
                 return Err(format!("incorrect number of arguments: expected {}, found {}",
                     arg_count, args.len()));
             }
-            $body
+
+            #[allow(unused_mut)]
+            let mut arg_num = 0;
+            $fn_name(env, $({
+                #![allow(unused_assignments)]
+                let result: $vtype = args[arg_num].extract()?;
+                arg_num += 1;
+                result
+            }),*).map($result_map)
         }
     }
 }

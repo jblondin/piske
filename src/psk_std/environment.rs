@@ -55,21 +55,21 @@ impl Environment {
     pub fn new<Sc: SymbolStore<Symbol>>(scope: &mut Sc) -> Environment {
         let mut env = Environment::default();
         add_func!(scope, env.func_table, "set_image_dims", ExtFuncIdent::SetImageDims,
-            set_image_dims, [("height", "int"), ("width", "int")], PType::Void);
+            psk_set_image_dims, [("height", "int"), ("width", "int")], PType::Void);
         add_func!(scope, env.func_table, "get_image_height", ExtFuncIdent::GetImageHeight,
-            get_image_height, [], PType::Int);
+            psk_get_image_height, [], PType::Int);
         add_func!(scope, env.func_table, "get_image_width", ExtFuncIdent::GetImageWidth,
-            get_image_width, [], PType::Int);
-        add_func!(scope, env.func_table, "write", ExtFuncIdent::Write, write, [("file", "string")],
-            PType::Void);
+            psk_get_image_width, [], PType::Int);
+        add_func!(scope, env.func_table, "write", ExtFuncIdent::Write, psk_write,
+            [("file", "string")], PType::Void);
         add_func!(scope, env.func_table, "set_pixel_data", ExtFuncIdent::SetPixelData,
-            set_pixel_data, [("row", "int"), ("col", "int"), ("value", "float")], PType::Void);
-        add_func!(scope, env.func_table, "project", ExtFuncIdent::Project, project,
+            psk_set_pixel_data, [("row", "int"), ("col", "int"), ("value", "float")], PType::Void);
+        add_func!(scope, env.func_table, "project", ExtFuncIdent::Project, psk_project,
             [("row", "int"), ("col", "int"), ("center", "complex"), ("size", "complex")],
             PType::Complex);
-        add_func!(scope, env.func_table, "re", ExtFuncIdent::Re, re, [("c", "complex")],
+        add_func!(scope, env.func_table, "re", ExtFuncIdent::Re, psk_re, [("c", "complex")],
             PType::Float);
-        add_func!(scope, env.func_table, "im", ExtFuncIdent::Im, im, [("c", "complex")],
+        add_func!(scope, env.func_table, "im", ExtFuncIdent::Im, psk_im, [("c", "complex")],
             PType::Float);
         env
     }
@@ -79,23 +79,31 @@ type FuncResult = Result<Value, String>;
 type RustFuncInterface = fn(&mut Environment, Vec<Value>) -> FuncResult;
 type StdFuncTable = HashMap<ExtFuncIdent, Box<RustFuncInterface>>;
 
-define_func!(set_image_dims, env, [height: usize, width: usize], {
+fn set_image_dims(env: &mut Environment, height: usize, width: usize) -> Result<(), String> {
     env.image_data.set_dims(Dims { rows: height, cols: width });
-    Ok(Value::Empty)
-});
-define_func!(get_image_height, env, [], {
+    Ok(())
+}
+add_interpreter_func!(psk_set_image_dims, set_image_dims, [usize, usize], |_| Value::Empty);
+
+fn get_image_height(env: &mut Environment) -> Result<usize, String> {
     let &Dims { rows: height, .. } = env.image_data.get_dims();
-    Ok(Value::Int(height as i64))
-});
-define_func!(get_image_width, env, [], {
+    Ok(height)
+}
+add_interpreter_func!(psk_get_image_height, get_image_height, [], |i| Value::Int(i as i64));
+
+fn get_image_width(env: &mut Environment) -> Result<usize, String> {
     let &Dims { cols: width, .. } = env.image_data.get_dims();
-    Ok(Value::Int(width as i64))
-});
-define_func!(set_pixel_data, env, [row: usize, col: usize, value: f64], {
+    Ok(width)
+}
+add_interpreter_func!(psk_get_image_width, get_image_width, [], |i| Value::Int(i as i64));
+
+fn set_pixel_data(env: &mut Environment, row: usize, col: usize, value: f64) -> Result<(), String> {
     env.image_data.set(Dims::new(row, col), value);
-    Ok(Value::Empty)
-});
-define_func!(write, env, [filename: String], {
+    Ok(())
+}
+add_interpreter_func!(psk_set_pixel_data, set_pixel_data, [usize, usize, f64], |_| Value::Empty);
+
+fn write(env: &mut Environment, filename: String) -> Result<(), String> {
     use std::fs::File;
 
     let &Dims { rows, cols } = env.image_data.get_dims();
@@ -116,17 +124,22 @@ define_func!(write, env, [filename: String], {
     let mut file = File::create(filename).map_err(|e| format!("{}", e))?;
     image::ImageLuma8(img_buf).save(&mut file, image::PNG).map_err(|e| format!("{}", e))?;
 
-    Ok(Value::Empty)
-});
-define_func!(project, env, [row: usize, col: usize, center: (f64, f64), size: (f64, f64)], {
+    Ok(())
+}
+add_interpreter_func!(psk_write, write, [String], |_| Value::Empty);
+
+fn project(env: &mut Environment, row: usize, col: usize, center: (f64, f64), size: (f64, f64))
+        -> Result<(f64, f64), String> {
     let &Dims { rows, cols } = env.image_data.get_dims();
     let re = (row as f64 / rows as f64 - 0.5) * size.0 + center.0;
     let im = (col as f64 / cols as f64 - 0.5) * size.1 + center.1;
-    Ok(Value::Complex(re, im))
-});
-define_func!(re, env, [c: (f64, f64)], {
-    Ok(Value::Float(c.0))
-});
-define_func!(im, env, [c: (f64, f64)], {
-    Ok(Value::Float(c.1))
-});
+    Ok((re, im))
+}
+add_interpreter_func!(psk_project, project, [usize, usize, (f64, f64), (f64, f64)],
+    |(re, im)| Value::Complex(re, im));
+
+fn re(_: &mut Environment, c: (f64, f64)) -> Result<f64, String> { Ok(c.0) }
+add_interpreter_func!(psk_re, re, [(f64, f64)], |f| Value::Float(f));
+
+fn im(_: &mut Environment, c: (f64, f64)) -> Result<f64, String> { Ok(c.1) }
+add_interpreter_func!(psk_im, im, [(f64, f64)], |f| Value::Float(f));
