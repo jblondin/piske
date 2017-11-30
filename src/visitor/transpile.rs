@@ -129,32 +129,35 @@ impl TranspileVisitor for Node<Expression> {
     fn visit(&self, state: &mut State) -> Result {
         match (&self.item, &self.annotation) {
             (&Expression::Literal(ref literal), ref annotation) => {
-                let qlit = add_cast(literal.visit(state)?, &annotation.borrow())?;
+                let qlit = add_cast(literal.visit(state)?, annotation.borrow().ty(),
+                    annotation.borrow().promote_type())?;
                 Ok(quote! { #qlit })
             },
             (&Expression::Identifier(ref ident), ref annotation) => {
-                let qident = add_cast(ident.visit(state)?, &annotation.borrow())?;
+                let qident = add_cast(ident.visit(state)?, annotation.borrow().ty(),
+                    annotation.borrow().promote_type())?;
                 Ok(quote! { #qident })
             },
             (&Expression::Infix { ref op, ref left, ref right }, ref annotation) => {
                 let infix_op = add_cast(infix_to_tokens(op, left, right, state)?,
-                    &annotation.borrow())?;
+                    annotation.borrow().ty(), annotation.borrow().promote_type())?;
                 Ok(quote! { #infix_op })
             },
             (&Expression::Prefix { ref op, ref right }, ref annotation) => {
                 let prefix_op = add_cast(prefix_to_tokens(op, right, state)?,
-                    &annotation.borrow())?;
+                    annotation.borrow().ty(), annotation.borrow().promote_type())?;
                 Ok(quote! { #prefix_op })
             },
             (&Expression::Postfix { ref op, ref left }, ref annotation) => {
                 let postfix_op = add_cast(postfix_to_tokens(op, left, state)?,
-                    &annotation.borrow())?;
+                    annotation.borrow().ty(), annotation.borrow().promote_type())?;
                 Ok(quote! { #postfix_op })
             },
             (&Expression::Block(ref block), ref annotation) => {
                 let qblock = block.visit(state)?;
                 let braced_qblock = quote! { { #qblock } };
-                add_cast(braced_qblock, &annotation.borrow())
+                add_cast(braced_qblock, annotation.borrow().ty(),
+                    annotation.borrow().promote_type())
             },
             (&Expression::FnCall { ref name, ref args }, ref annotation) => {
                 let mut qargs = vec![];
@@ -162,7 +165,8 @@ impl TranspileVisitor for Node<Expression> {
                     qargs.push(arg.visit(state)?);
                 }
                 let qname = name.visit(state)?;
-                add_cast(quote! { #qname(#(#qargs),*) }, &annotation.borrow())
+                add_cast(quote! { #qname(#(#qargs),*) }, annotation.borrow().ty(),
+                    annotation.borrow().promote_type())
             },
             (&Expression::IfElse { ref cond, ref if_block, ref else_block }, ref annotation) => {
                 let qcond = cond.visit(state)?;
@@ -172,10 +176,11 @@ impl TranspileVisitor for Node<Expression> {
                     Some(ref else_block) => {
                         let qelse = else_block.visit(state)?;
                         add_cast(quote! { if #qcond { #nl #qif } else { #nl #qelse } },
-                            &annotation.borrow())
+                            annotation.borrow().ty(), annotation.borrow().promote_type())
                     },
                     None => {
-                        add_cast(quote! { if #qcond { #nl #qif } }, &annotation.borrow())
+                        add_cast(quote! { if #qcond { #nl #qif } }, annotation.borrow().ty(),
+                            annotation.borrow().promote_type())
                     }
                 }
             },
@@ -232,9 +237,9 @@ impl TranspileVisitor for Node<Identifier> {
     }
 }
 
-fn add_cast<T: ToTokens + ::std::fmt::Display>(elem: T, annotation: &Annotation) -> Result {
-    let (ty, promote_ty) = (annotation.ty(), annotation.promote_type());
-    match ty {
+fn add_cast<T: ToTokens + ::std::fmt::Display>(elem: T, actual_ty: Option<PType>,
+        promote_ty: Option<PType>) -> Result {
+    match actual_ty {
         Some(_) => {
             match promote_ty {
                 Some(promote_ty) => {
