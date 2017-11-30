@@ -25,6 +25,8 @@ pub struct State {
     pub std_env: Environment,
     /// Input / output
     pub io: Io,
+    /// Loop depth counter
+    pub loop_depth: usize,
 }
 impl Default for State {
     fn default() -> State {
@@ -37,6 +39,7 @@ impl Default for State {
             logger: LogListener::new(io::stdout(), io::stderr()),
             std_env: env,
             io: Io::default(),
+            loop_depth: 0,
         };
 
         // define builtins in top-level (global) scope

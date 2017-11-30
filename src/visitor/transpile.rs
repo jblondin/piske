@@ -27,11 +27,21 @@ impl TranspileVisitor for Node<Program> {
     }
 }
 
-fn nl() -> Tokens {
+fn raw(s: &str) -> Tokens {
     let mut t = Tokens::new();
-    t.append("\n");
+    t.append(s);
     t
 }
+fn nl() -> Tokens {
+    raw("\n")
+}
+fn loop_var_name(state: &State) -> Tokens {
+    raw(&format!("loop_return_value_{}", state.loop_depth))
+}
+fn outer_loop_var_name(state: &State) -> Tokens {
+    raw(&format!("loop_return_value_{}", state.loop_depth - 1))
+}
+
 impl TranspileVisitor for Node<Block> {
     fn visit(&self, state: &mut State) -> Result {
         let mut statements = vec![];
@@ -80,10 +90,10 @@ impl TranspileVisitor for Node<Statement> {
                 let qexpr = expr.visit(state)?;
                 Ok(quote! { return #qexpr; })
             }
-            (&Statement::Break(_), _) => {
-                // let qexpr = expr.visit(state)?;
-                //TODO: figure out how to handle returning this
-                Ok(quote! { break; })
+            (&Statement::Break(ref expr), _) => {
+                let qexpr = expr.visit(state)?;
+                let loop_var_name = outer_loop_var_name(state);
+                Ok(quote! { #loop_var_name = #qexpr; break; })
             },
             (&Statement::Print(ref exprs), _) => {
                 let mut qexprs = vec![];
@@ -164,18 +174,25 @@ impl TranspileVisitor for Node<Expression> {
                 }
             },
             (&Expression::Loop { ref variant, ref set, ref body }, ref annotation) => {
-                let qbody = body.visit(state)?;
-                let qset = set.visit(state)?;
                 let nl = nl();
-                match *variant {
+                let loop_var_name = loop_var_name(state);
+                state.loop_depth += 1;
+                let qset = set.visit(state)?;
+                let qbody = body.visit(state)?;
+                let qvar = match *variant {
                     Some(ref variant) => {
-                        let qvar = variant.visit(state)?;
-                        add_cast(quote! { for #qvar in #qset { #nl #qbody } }, &annotation.borrow())
+                        variant.visit(state)?
                     },
                     None => {
-                        add_cast(quote! { for _ in #qset { #nl #qbody } }, &annotation.borrow())
+                        raw("_")
                     }
-                }
+                };
+                state.loop_depth -= 1;
+                add_cast(quote! { {
+                    let mut #loop_var_name;
+                    for #qvar in #qset { #nl #loop_var_name = { #nl #qbody }; }
+                    #loop_var_name
+                } }, annotation.borrow().ty(), annotation.borrow().promote_type())
             },
         }
     }
