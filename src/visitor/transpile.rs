@@ -71,7 +71,11 @@ impl TranspileVisitor for Node<Statement> {
             },
             (&Statement::Expression(ref expr), _) => {
                 let qexpr = expr.visit(state)?;
-                Ok(quote! { #qexpr; })
+                // only add a semi-colon to expressions if the return type is void
+                match expr.annotation.borrow().ty() {
+                    Some(PType::Void) => Ok(quote! { #qexpr; }),
+                    _ => Ok(quote! { #qexpr })
+                }
             },
             (&Statement::FnDefine(FunctionDef { ref name, ref ret_type, ref params, ref body } ),
                     _) => {
