@@ -188,7 +188,7 @@ impl TranspileVisitor for Node<Set> {
                 let qstart = start.visit(state)?;
                 let qend = end.visit(state)?;
                 let qstep = step.visit(state)?;
-                Ok(quote!({ StepRange::new(#qstart, #qend, #end_inclusive, #qstep) }))
+                Ok(quote!{ StepRange::new(#qstart, #qend, #end_inclusive, #qstep) })
             }
         }
     }
