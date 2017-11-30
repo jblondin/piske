@@ -7,13 +7,6 @@ use test_utils::examine_translated_source;
 #[test]
 fn test_examine() {
     let prog = r#"
-    let a = 5.0;
-    a
-    "#;
-
-    examine_translated_source(prog);
-
-    let prog = r#"
 let height = 1024;
 let width = 1024;
 set_image_dims(height, width);
