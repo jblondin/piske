@@ -23,7 +23,9 @@ pub trait TranspileVisitor {
 impl TranspileVisitor for Node<Program> {
     fn visit(&self, state: &mut State) -> Result {
         let prog = self.item.0.visit(state)?;
-        Ok(quote! { #prog })
+        let pref = preface();
+        let nl = nl();
+        Ok(quote! { #pref #nl #prog })
     }
 }
 
@@ -237,7 +239,7 @@ fn add_cast<T: ToTokens + ::std::fmt::Display>(elem: T, annotation: &Annotation)
                         PType::Float => quote! { (#elem as f64) },
                         PType::Int => quote! { (#elem as i64) },
                         PType::Boolean => quote! { #elem as bool },
-                        PType::Complex => quote! { Complex::new(#elem, 0.0) },
+                        PType::Complex => quote! { Complex::new((#elem) as f64, 0.0) },
                         PType::Set => { return Err(format!("invalid promotion to set")); },
                         PType::Void => { return Err(format!("invliad promotion to void")); },
                     })
@@ -293,7 +295,7 @@ fn prefix_to_tokens(op: &PrefixOp, right: &Node<Expression>, state: &mut State) 
 fn postfix_to_tokens(op: &PostfixOp, left: &Node<Expression>, state: &mut State) -> Result {
     let qleft = left.visit(state)?;
     Ok(match *op {
-        PostfixOp::Imaginary => { quote! { Complex::new(0.0, #qleft) } },
+        PostfixOp::Imaginary => { quote! { Complex::new(0.0, (#qleft) as f64) } },
         PostfixOp::Conjugate => {
             match left.annotation.borrow().promoted() {
                 Some(PType::Int) => { quote! { 1.0 / (#qleft as f64) } },
@@ -315,4 +317,33 @@ impl ToTokens for Literal {
             Literal::Boolean(b) => { tokens.append(format!("{}", b)); },
         }
     }
+}
+
+fn preface() -> Tokens {
+    raw(r#"
+
+extern crate piske;
+use piske::psk_std::step_range::StepRange;
+
+struct Complex {
+    pub re: f64,
+    pub im: f64
+}
+impl Complex {
+    fn new(re: f64, im: f64) -> Complex {
+        Complex { re: re, im: im }
+    }
+    fn conj(self) -> Complex {
+        Complex { re: self.re, im: -self.im }
+    }
+}
+fn re(c: &Complex) -> f64 {
+    c.re
+}
+fn im(c: &Complex) -> f64 {
+    c.im
+}
+
+
+    "#)
 }
