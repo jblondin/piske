@@ -1,10 +1,10 @@
 //! Standard library functions.
 
-use image;
+use img;
 
-use psk_std::environment::Environment;
-use psk_std::image::Dims;
-use psk_std::extrema::Extrema;
+use environment::Environment;
+use image::Dims;
+use extrema::Extrema;
 
 /// Set the image dimensions. May invalidate the contents of the image data.
 pub fn set_image_dims(env: &mut Environment, height: usize, width: usize) -> Result<(), String> {
@@ -32,7 +32,7 @@ pub fn write(env: &mut Environment, filename: String) -> Result<(), String> {
     use std::fs::File;
 
     let &Dims { rows, cols } = env.image_data.get_dims();
-    let mut img_buf = image::ImageBuffer::new(rows as u32, cols as u32);
+    let mut img_buf = img::ImageBuffer::new(rows as u32, cols as u32);
     let extrema = env.image_data.extrema();
     let range = extrema.range();
 
@@ -43,11 +43,11 @@ pub fn write(env: &mut Environment, filename: String) -> Result<(), String> {
         let alpha = if alpha > 1.0 { 255u8 }
             else if alpha < 0.0 { 0u8 }
             else { (alpha*255.0) as u8 };
-        *pixel = image::Luma([alpha]);
+        *pixel = img::Luma([alpha]);
     }
 
     let mut file = File::create(filename).map_err(|e| format!("{}", e))?;
-    image::ImageLuma8(img_buf).save(&mut file, image::PNG).map_err(|e| format!("{}", e))?;
+    img::ImageLuma8(img_buf).save(&mut file, img::PNG).map_err(|e| format!("{}", e))?;
 
     Ok(())
 }

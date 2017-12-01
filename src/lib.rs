@@ -6,9 +6,9 @@
 #[macro_use] extern crate quote;
 
 extern crate regex;
-extern crate image;
 
 #[macro_use] extern crate sindra;
+extern crate psk_std;
 
 pub mod ast;
 
@@ -30,7 +30,6 @@ pub mod symbol;
 pub use symbol::Symbol;
 
 pub mod value;
-pub mod psk_std;
 pub mod visitor;
 
 pub mod interpret;

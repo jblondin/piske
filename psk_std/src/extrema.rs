@@ -1,6 +1,6 @@
 use std::ops::Sub;
 
-use psk_std::image::ImageData;
+use image::ImageData;
 
 pub trait MaxValue {
     fn max_value() -> Self;

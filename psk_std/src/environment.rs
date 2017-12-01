@@ -1,4 +1,4 @@
-use psk_std::image::ImageData;
+use image::ImageData;
 
 
 /// Piske standard environment

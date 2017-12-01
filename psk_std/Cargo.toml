@@ -1,0 +1,7 @@
+[package]
+name = "psk_std"
+version = "0.1.0"
+authors = ["Jamie Blondin <jblondin@gmail.com>"]
+
+[dependencies]
+image = "*"

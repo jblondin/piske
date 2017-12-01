@@ -2,3 +2,4 @@
 **/*.rs.bk
 Cargo.lock
 repl_history.txt
+/psk_std/target/
