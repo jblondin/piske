@@ -365,7 +365,6 @@ impl TypeComputationVisitor for Node<Expression> {
                         } else {
                             // check the parameter types
                             for (ref param, ref arg) in params.iter().zip(args) {
-                                println!("trying func {} param {}", name, param.item);
                                 let arg_ty = arg.annotation.borrow().ty().unwrap();
                                 let param_ty = param.annotation.borrow().ty().unwrap();
 
