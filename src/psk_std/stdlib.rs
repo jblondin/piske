@@ -1,3 +1,5 @@
+//! Standard library functions.
+
 use image;
 
 use psk_std::environment::Environment;

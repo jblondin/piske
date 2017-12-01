@@ -187,7 +187,7 @@ impl EvaluateVisitor for Node<Expression> {
                         Ok(val)
                     },
                     Symbol::Function { body: FunctionBody::External(ext_func_id), .. } => {
-                        state.std_env.call(ext_func_id, evaluated_args)
+                        state.std_funcs.call(&mut state.std_env, ext_func_id, evaluated_args)
                     },
                     _ => Err(format!("unable to call symbol '{}' as function", name.item))
                 }

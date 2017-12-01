@@ -11,7 +11,7 @@ use sindra::scope::{MemoryScope, SymbolStore};
 use Symbol;
 use PType;
 use value::Value;
-use psk_std::Environment;
+use psk_std::{StdFuncTable, Environment};
 
 /// State carried throughout the tree walker. Contains scope information and logger.
 pub struct State {
@@ -21,7 +21,9 @@ pub struct State {
     pub global: Rc<RefCell<MemoryScope<Symbol, Value>>>,
     /// Logger
     pub logger: LogListener<String, io::Stdout, io::Stderr>,
-    /// Standard function environment
+    /// Standard function table
+    pub std_funcs: StdFuncTable,
+    /// Standard running environment
     pub std_env: Environment,
     /// Input / output
     pub io: Io,
@@ -31,12 +33,14 @@ pub struct State {
 impl Default for State {
     fn default() -> State {
         let global = Rc::new(RefCell::new(MemoryScope::default()));
-        let env = Environment::new(&mut *global.borrow_mut());
+        let env = Environment::default();
+        let std_funcs = StdFuncTable::new(&mut *global.borrow_mut());
 
         let mut state = State {
             scope: Rc::clone(&global),
             global: global,
             logger: LogListener::new(io::stdout(), io::stderr()),
+            std_funcs: std_funcs,
             std_env: env,
             io: Io::default(),
             loop_depth: 0,
