@@ -25,7 +25,7 @@ impl TranspileVisitor for Node<Program> {
         let prog = self.item.0.visit(state)?;
         let pref = preface();
         let nl = nl();
-        Ok(quote! { #pref #nl #prog })
+        Ok(quote! { #pref #nl fn main() { #nl #prog } })
     }
 }
 

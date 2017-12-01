@@ -1,0 +1,8 @@
+[package]
+name = "transpiler"
+version = "0.1.0"
+authors = ["Jamie Blondin <jblondin@gmail.com>"]
+
+[dependencies]
+cargo = "0.23.0"
+piske = { path = "../" }

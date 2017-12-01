@@ -3,3 +3,4 @@
 Cargo.lock
 repl_history.txt
 /psk_std/target/
+/transpiler/target/
