@@ -7,7 +7,7 @@ use sindra::scope::SymbolStore;
 use value::Value;
 use Symbol;
 
-use psk_std::environment::Environment;
+use psk_std::Environment;
 use psk_std::stdlib::*;
 
 /// External function identifiers for the standard library

@@ -7,7 +7,8 @@ use sindra::node::Node;
 
 use ast::{Block, Parameter};
 use PType;
-use psk_std::ExtFuncIdent;
+
+use visitor::interp::ExtFuncIdent;
 
 /// Symbol object (for use in symbol tables).
 #[derive(Clone, Debug, PartialEq)]

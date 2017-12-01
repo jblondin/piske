@@ -11,7 +11,8 @@ use sindra::scope::{MemoryScope, SymbolStore};
 use Symbol;
 use PType;
 use value::Value;
-use psk_std::{StdFuncTable, Environment};
+use visitor::interp::StdFuncTable;
+use psk_std::Environment;
 
 /// State carried throughout the tree walker. Contains scope information and logger.
 pub struct State {

@@ -10,5 +10,6 @@ pub use self::type_visitor::TypeComputationVisitor;
 pub mod transpile;
 pub use self::transpile::TranspileVisitor;
 
+pub mod interp;
 pub mod state;
 pub use self::state::State;
