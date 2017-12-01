@@ -4,37 +4,15 @@ use sindra::log::LogPriority;
 
 use visitor::{self, State};
 use value::Value;
+use glue::pipeline;
 use parse;
 
-/// Abstract syntax tree visitor pipeline
-pub fn pipeline<T>(ast: &T, mut state: &mut State) -> Result<Value, String>
+/// Full interpreter pipeline
+pub fn interpret_pipeline<T>(ast: &T, mut state: &mut State) -> Result<Value, String>
         where T: visitor::symbol::SymbolDefineVisitor +
                  visitor::type_visitor::TypeComputationVisitor +
                  visitor::eval::EvaluateVisitor {
-
-    // define symbols
-    match visitor::symbol::SymbolDefineVisitor::visit(ast, &mut state) {
-        Ok(_) => {
-            if state.logger.flush() == Some(LogPriority::Error) {
-                return Err(format!("stopping due to previous error(s)"));
-            }
-        },
-        Err(e) => {
-            return Err(format!("fatal error during symbol definition: {}", e));
-        }
-    }
-
-    // compute, check types
-    match visitor::type_visitor::TypeComputationVisitor::visit(ast, &mut state) {
-        Ok(_) => {
-            if state.logger.flush() == Some(LogPriority::Error) {
-                return Err(format!("stopping due to previous error(s)"));
-            }
-        },
-        Err(e) => {
-            return Err(format!("fatal error during type checking: {}", e));
-        }
-    }
+    pipeline(ast, &mut state)?;
 
     // evaluate
     let final_val = {
@@ -65,7 +43,7 @@ pub fn interpret_statement(line: &str, mut state: &mut State)
         }
     };
 
-    pipeline(&statement_ast, &mut state)
+    interpret_pipeline(&statement_ast, &mut state)
 }
 
 /// Interpret a program, given as a string.
@@ -81,6 +59,5 @@ pub fn interpret(program: &str) -> Result<Value, String> {
     // set up a default state
     let mut state = State::default();
 
-    pipeline(&ast, &mut state)
+    interpret_pipeline(&ast, &mut state)
 }
-

@@ -10,7 +10,7 @@ fn interpret_file(file_name: &str) {
             let mut source = String::new();
             match file.read_to_string(&mut source) {
                 Ok(_) => {
-                    match piske::interpret::interpret(&source) {
+                    match piske::glue::interpret(&source) {
                         Ok(_) => {},
                         Err(e) => {
                             writeln!(::std::io::stderr(), "interpreting failed: {}", e).unwrap();
@@ -34,7 +34,7 @@ fn interpret_file(file_name: &str) {
 fn main() {
     let args: Vec<String> = ::std::env::args().collect();
     if args.len() != 2 {
-        writeln!(::std::io::stderr(), "Usage: {} {}", args[0], args[1]).unwrap();
+        writeln!(::std::io::stderr(), "Usage: {} <file>", args[0]).unwrap();
         ::std::process::exit(1);
     }
     interpret_file(&args[1]);

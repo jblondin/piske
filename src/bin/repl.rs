@@ -11,7 +11,7 @@ use rustyline::error::ReadlineError;
 use sindra::scope::Scoped;
 
 use piske::parse;
-use piske::interpret;
+use piske::glue;
 use piske::visitor::State;
 
 mod result { pub type Result<T> = ::std::result::Result<T, String>; }
@@ -35,7 +35,7 @@ impl<O: Write, E: Write> Repl<O, E> {
     fn new(mut cout: O, cerr: E) -> Repl<O, E> {
         let ast = parse::program("").unwrap();
         let mut state = State::default();
-        interpret::pipeline(&ast, &mut state).unwrap();
+        glue::interpret_pipeline(&ast, &mut state).unwrap();
         state.scope = ast.item.0.annotation.borrow().scope().unwrap();
 
         Repl {
@@ -87,7 +87,7 @@ impl<O: Write, E: Write> Repl<O, E> {
 
     fn read_eval_print(&mut self, input: &str) -> Result {
 
-        match interpret::interpret_statement(input, &mut self.state) {
+        match glue::interpret_statement(input, &mut self.state) {
             Ok(val) => {
                 writeln!(self.cout, "{}", val).unwrap();
             },
