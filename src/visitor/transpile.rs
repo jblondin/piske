@@ -30,9 +30,10 @@ impl TranspileVisitor for Node<Program> {
         Ok(quote! {
 #pref #nl
 
-fn main() { #nl
+fn run() -> Result<(), String> { #nl
     let env = Environment::default(); #nl
     #prog
+    ; Ok(())
 }
         })
     }
@@ -172,17 +173,24 @@ impl TranspileVisitor for Node<Expression> {
                 let mut qargs = vec![];
                 let scope = annotation.borrow().scope().unwrap();
                 let symbol: Option<Symbol> = scope.borrow().resolve(&name.item);
-                if let Some(sym) = symbol {
-                    if sym.is_stdlib_func() {
-                        qargs.push(quote! { &mut env });
-                    }
+                let is_stdlib_call = if let Some(sym) = symbol {
+                    sym.is_stdlib_func()
+                } else {
+                    false
+                };
+                if is_stdlib_call {
+                    qargs.push(quote! { &mut env });
                 }
                 for arg in args {
                     qargs.push(arg.visit(state)?);
                 }
                 let qname = name.visit(state)?;
-                add_cast(quote! { #qname(#(#qargs),*) }, annotation.borrow().ty(),
-                    annotation.borrow().promote_type())
+                let fn_call = if is_stdlib_call {
+                    quote! { #qname(#(#qargs),*)? }
+                } else {
+                    quote! { #qname(#(#qargs),*) }
+                };
+                add_cast(fn_call, annotation.borrow().ty(), annotation.borrow().promote_type())
             },
             (&Expression::IfElse { ref cond, ref if_block, ref else_block }, ref annotation) => {
                 let qcond = cond.visit(state)?;
@@ -346,12 +354,21 @@ impl ToTokens for Literal {
 
 fn preface() -> Tokens {
     raw(r#"
-
 extern crate psk_std;
+
+use std::io::Write;
+
 use psk_std::step_range::StepRange;
 use psk_std::stdlib::*;
 use psk_std::complex::Complex;
 use psk_std::Environment;
 
-    "#)
+fn main() {
+    if let Err(e) = run() {
+        writeln!(::std::io::stderr(), "ERROR: {}", e).unwrap();
+        ::std::process::exit(1);
+    }
+}
+
+"#)
 }
