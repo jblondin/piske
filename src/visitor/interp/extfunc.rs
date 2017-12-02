@@ -9,6 +9,7 @@ use Symbol;
 
 use psk_std::Environment;
 use psk_std::stdlib::*;
+use psk_std::complex::Complex;
 
 /// External function identifiers for the standard library
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -79,7 +80,7 @@ add_interpreter_func!(psk_get_image_height, get_image_height, [], |i| Value::Int
 add_interpreter_func!(psk_get_image_width, get_image_width, [], |i| Value::Int(i as i64));
 add_interpreter_func!(psk_set_pixel_data, set_pixel_data, [i64, i64, f64], |_| Value::Empty);
 add_interpreter_func!(psk_write, write, [String], |_| Value::Empty);
-add_interpreter_func!(psk_project, project, [i64, i64, (f64, f64), (f64, f64)],
-    |(re, im)| Value::Complex(re, im));
-add_interpreter_func!(psk_re, re, [(f64, f64)], |f| Value::Float(f));
-add_interpreter_func!(psk_im, im, [(f64, f64)], |f| Value::Float(f));
+add_interpreter_func!(psk_project, project, [i64, i64, Complex, Complex],
+    |c| Value::Complex(c.re, c.im));
+add_interpreter_func!(psk_re, re, [Complex], |f| Value::Float(f));
+add_interpreter_func!(psk_im, im, [Complex], |f| Value::Float(f));

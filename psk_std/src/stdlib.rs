@@ -5,6 +5,7 @@ use img;
 use environment::Environment;
 use image::Dims;
 use extrema::Extrema;
+use complex::Complex;
 
 /// Set the image dimensions. May invalidate the contents of the image data.
 pub fn set_image_dims(env: &mut Environment, height: i64, width: i64) -> Result<(), String> {
@@ -52,14 +53,14 @@ pub fn write(env: &mut Environment, filename: String) -> Result<(), String> {
     Ok(())
 }
 /// Project the given pixel onto the underlying axes, using the provided center and size.
-pub fn project(env: &mut Environment, row: i64, col: i64, center: (f64, f64), size: (f64, f64))
-        -> Result<(f64, f64), String> {
+pub fn project(env: &mut Environment, row: i64, col: i64, center: Complex, size: Complex)
+        -> Result<Complex, String> {
     let &Dims { rows, cols } = env.image_data.get_dims();
-    let re = (row as f64 / rows as f64 - 0.5) * size.0 + center.0;
-    let im = (col as f64 / cols as f64 - 0.5) * size.1 + center.1;
-    Ok((re, im))
+    let re = (row as f64 / rows as f64 - 0.5) * size.re + center.re;
+    let im = (col as f64 / cols as f64 - 0.5) * size.im + center.im;
+    Ok(Complex::new(re, im))
 }
 /// Extract the real component of a complex number.
-pub fn re(_: &mut Environment, c: (f64, f64)) -> Result<f64, String> { Ok(c.0) }
+pub fn re(_: &mut Environment, c: Complex) -> Result<f64, String> { Ok(c.re) }
 /// Extract the imaginary component of a complex number.
-pub fn im(_: &mut Environment, c: (f64, f64)) -> Result<f64, String> { Ok(c.1) }
+pub fn im(_: &mut Environment, c: Complex) -> Result<f64, String> { Ok(c.im) }

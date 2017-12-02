@@ -10,6 +10,8 @@ use sindra::value::{Coerce, Cast, Extract};
 use ast::Literal;
 use PType;
 
+use psk_std::complex::Complex;
+
 /// Value type for run-time memory values.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -205,9 +207,9 @@ impl Value {
     ///
     /// #Failures
     /// Returns an 'Err' if the Value is not the right variant.
-    pub fn extract_complex(&self) -> Result<(f64, f64), String> {
+    pub fn extract_complex(&self) -> Result<Complex, String> {
         match *self {
-            Value::Complex(re, im) => Ok((re, im)),
+            Value::Complex(re, im) => Ok(Complex::new(re, im)),
             _ => Err(format!("unable to extract complex number from type {}", PType::from(self)))
         }
     }
@@ -269,13 +271,13 @@ impl Extract<f64> for Value {
         }
     }
 }
-impl Extract<(f64, f64)> for Value {
-    fn extract(&self) -> Result<(f64, f64), String> {
+impl Extract<Complex> for Value {
+    fn extract(&self) -> Result<Complex, String> {
         match *self {
             Value::Complex(re, im) => {
-                Ok((re, im))
+                Ok(Complex::new(re, im))
             },
-            _ => Err(format!("unable to extract float tuple from type {}", PType::from(self)))
+            _ => Err(format!("unable to extract complex from type {}", PType::from(self)))
         }
     }
 }

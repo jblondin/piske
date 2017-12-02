@@ -6,6 +6,8 @@ use value::Value;
 use ast::{InfixOp, PrefixOp, PostfixOp, CompareOp};
 use PType;
 
+use psk_std::complex::Complex;
+
 #[inline(always)]
 fn compare_primitives<T: PartialOrd + PartialEq>(op: CompareOp, left: T, right: T) -> bool {
     match op {
@@ -84,8 +86,8 @@ impl BinaryOperator<PType, Value> for InfixOp {
                 }
             }
             PType::Complex => {
-                let (a, b) = left.extract_complex()?;
-                let (c, d) = right.extract_complex()?;
+                let Complex { re: a, im: b } = left.extract_complex()?;
+                let Complex { re: c, im: d } = right.extract_complex()?;
                 match *self {
                     InfixOp::Add => Ok(Value::Complex(a + c, b + d)),
                     InfixOp::Subtract => Ok(Value::Complex(a - c, b - d)),
