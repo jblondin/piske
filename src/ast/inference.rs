@@ -28,23 +28,24 @@ lazy_static! {
 }
 
 lazy_static! {
-    /// Table of comparable (via comparison operators; e.g. <, <=, >, >=) types. 'true' indicates
-    /// the types are comparable, 'false' indicates they are not.
-    pub static ref COMPARABLE: [[bool; 7]; 7] = [
+    /// Table of comparable (via comparison operators; e.g. <, <=, >, >=) types. 'Some(...)'
+    /// indicates the types are comparable but both sides need to be the specified type. 'None'
+    /// indicates they are not comparable.
+    pub static ref COMPARABLE: [[Option<PType>; 7]; 7] = [
         // String == [String, Float, Int, Boolean, Complex, Set, Void]
-        [true, false, false, false, false, false, false],
+        [Some(PType::String), None, None, None, None, None, None],
         // Float == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, true, true, false, true, false, false],
+        [None, Some(PType::Float), Some(PType::Float), None, Some(PType::Complex), None, None],
         // Int == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, true, true, false, true, false, false],
+        [None, Some(PType::Float), Some(PType::Int), None, Some(PType::Complex), None, None],
         // Boolean == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, false, false, true, false, false, false],
+        [None, None, None, Some(PType::Boolean), None, None, None],
         // Complex == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, true, true, false, true, false, false],
+        [None, Some(PType::Complex), Some(PType::Complex), None, Some(PType::Complex), None, None],
         // Set == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, false, false, false, false, true, false],
+        [None, None, None, None, None, Some(PType::Set), None],
         // Void == [String, Float, Int, Boolean, Complex, Set, Void]
-        [false, false, false, false, false, false, false],
+        [None, None, None, None, None, None, None],
     ];
 }
 
@@ -55,22 +56,20 @@ impl InferTypesBinary for InfixOp {
         match *self {
             InfixOp::Subtract | InfixOp::Multiply | InfixOp::Divide | InfixOp::Add => {
                 ARITH_RESULT_TABLE[left as usize][right as usize]
+                    .map(|t| BinaryOpTypes { result: t, left: t, right: t })
             },
             InfixOp::Power => {
                 if left == PType::String || right == PType::String {
                     None
                 } else {
-                    Some(PType::Float)
+                    Some(PType::Float).map(|t| BinaryOpTypes { result: t, left: t, right: t })
                 }
             },
             InfixOp::Comparison(_) => {
-                if COMPARABLE[left as usize][right as usize] {
-                    Some(PType::Boolean)
-                } else {
-                    None
-                }
+                COMPARABLE[left as usize][right as usize]
+                    .map(|t| BinaryOpTypes { result: PType::Boolean, left: t, right: t })
             }
-        }.map(|t| BinaryOpTypes { result: t, left: t, right: t })
+        }
     }
 }
 
