@@ -173,47 +173,6 @@ impl PartialOrd for Value {
 }
 
 impl Value {
-    /// Extract an f64 value from a Value.
-    ///
-    /// #Failures
-    /// Returns an `Err` if the Value is not the right variant.
-    pub fn extract_float(&self) -> Result<f64, String> {
-        match *self {
-            Value::Float(f) => Ok(f),
-            _ => Err(format!("unable to extract float from type {}", PType::from(self)))
-        }
-    }
-    /// Extract an i64 value from a Value.
-    ///
-    /// #Failures
-    /// Returns an `Err` if the Value is not the right variant.
-    pub fn extract_int(&self) -> Result<i64, String> {
-        match *self {
-            Value::Int(i) => Ok(i),
-            _ => Err(format!("unable to extract int from type {}", PType::from(self)))
-        }
-    }
-    /// Extract a boolean value from a Value.
-    ///
-    /// #Failures
-    /// Returns an `Err` if the Value is not the right variant.
-    pub fn extract_bool(&self) -> Result<bool, String> {
-        match *self {
-            Value::Boolean(b) => Ok(b),
-            _ => Err(format!("unable to extract boolean from type {}", PType::from(self)))
-        }
-    }
-    /// Extract a complex value from a Value.
-    ///
-    /// #Failures
-    /// Returns an 'Err' if the Value is not the right variant.
-    pub fn extract_complex(&self) -> Result<Complex, String> {
-        match *self {
-            Value::Complex(re, im) => Ok(Complex::new(re, im)),
-            _ => Err(format!("unable to extract complex number from type {}", PType::from(self)))
-        }
-    }
-
     /// Returns true if the associated type for this value is the same type as the associated
     /// type of the other value. Returns false otherwise.
     pub fn has_same_type(&self, other: &Value) -> bool {
