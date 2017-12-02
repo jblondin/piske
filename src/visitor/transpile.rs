@@ -7,7 +7,9 @@
 use quote::{Tokens, ToTokens, Ident};
 
 use sindra::{Typed, Identifier, Node};
+use sindra::scope::{SymbolStore, Scoped};
 
+use symbol::Symbol;
 use PType;
 use ast::*;
 use visitor::state::State;
@@ -25,7 +27,14 @@ impl TranspileVisitor for Node<Program> {
         let prog = self.item.0.visit(state)?;
         let pref = preface();
         let nl = nl();
-        Ok(quote! { #pref #nl fn main() { #nl #prog } })
+        Ok(quote! {
+#pref #nl
+
+fn main() { #nl
+    let env = Environment::default(); #nl
+    #prog
+}
+        })
     }
 }
 
@@ -161,6 +170,13 @@ impl TranspileVisitor for Node<Expression> {
             },
             (&Expression::FnCall { ref name, ref args }, ref annotation) => {
                 let mut qargs = vec![];
+                let scope = annotation.borrow().scope().unwrap();
+                let symbol: Option<Symbol> = scope.borrow().resolve(&name.item);
+                if let Some(sym) = symbol {
+                    if sym.is_stdlib_func() {
+                        qargs.push(quote! { &mut env });
+                    }
+                }
                 for arg in args {
                     qargs.push(arg.visit(state)?);
                 }
@@ -331,28 +347,10 @@ impl ToTokens for Literal {
 fn preface() -> Tokens {
     raw(r#"
 
-extern crate piske;
-use piske::psk_std::step_range::StepRange;
-
-struct Complex {
-    pub re: f64,
-    pub im: f64
-}
-impl Complex {
-    fn new(re: f64, im: f64) -> Complex {
-        Complex { re: re, im: im }
-    }
-    fn conj(self) -> Complex {
-        Complex { re: self.re, im: -self.im }
-    }
-}
-fn re(c: &Complex) -> f64 {
-    c.re
-}
-fn im(c: &Complex) -> f64 {
-    c.im
-}
-
+extern crate psk_std;
+use psk_std::step_range::StepRange;
+use psk_std::stdlib::*;
+use psk_std::complex::Complex;
 
     "#)
 }

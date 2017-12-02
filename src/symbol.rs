@@ -78,11 +78,19 @@ impl Symbol {
             body: FunctionBody::External(body),
             params: params,
         }
-    }    /// Create a variable Symbol
+    }
+    /// Create a variable Symbol
     pub fn variable(name: Identifier, ty: Option<PType>) -> Symbol {
         Symbol::Variable {
             name: name,
             ty: ty
+        }
+    }
+    /// Return true if symbol is a standard library function
+    pub fn is_stdlib_func(&self) -> bool {
+        match *self {
+            Symbol::Function { body: FunctionBody::External (_), .. } => true,
+            _ => false,
         }
     }
 }

@@ -9,5 +9,6 @@ mod extrema;
 pub mod stdlib;
 mod environment;
 pub use self::environment::*;
+pub mod complex;
 
 pub mod step_range;
