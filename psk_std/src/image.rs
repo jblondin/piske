@@ -1,6 +1,6 @@
 pub struct Dims {
-    pub rows: usize,
-    pub cols: usize,
+    pub rows: i64,
+    pub cols: i64,
 }
 impl Default for Dims {
     fn default() -> Dims {
@@ -11,7 +11,7 @@ impl Default for Dims {
     }
 }
 impl Dims {
-    pub fn new(r: usize, c: usize) -> Dims {
+    pub fn new(r: i64, c: i64) -> Dims {
         Dims {
             rows: r,
             cols: c,
@@ -125,16 +125,16 @@ impl<T: Clone + Default> Default for ImageData<T> {
         let (r, c) = (dims.rows, dims.cols);
         ImageData {
             dims: dims,
-            values: vec![T::default(); r * c]
+            values: vec![T::default(); (r * c) as usize]
         }
     }
 }
 impl<T: Copy> ImageData<T> {
     pub fn get(&self, loc: Dims) -> T {
-        self.values[loc.cols * self.dims.rows + loc.rows]
+        self.values[(loc.cols * self.dims.rows + loc.rows) as usize]
     }
     pub fn set(&mut self, loc: Dims, value: T) {
-        self.values[loc.cols * self.dims.rows + loc.rows] = value;
+        self.values[(loc.cols * self.dims.rows + loc.rows) as usize] = value;
     }
     pub fn get_dims(&self) -> &Dims { &self.dims }
     pub fn set_dims(&mut self, dims: Dims) { self.dims = dims }

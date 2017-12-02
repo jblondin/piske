@@ -7,22 +7,22 @@ use image::Dims;
 use extrema::Extrema;
 
 /// Set the image dimensions. May invalidate the contents of the image data.
-pub fn set_image_dims(env: &mut Environment, height: usize, width: usize) -> Result<(), String> {
+pub fn set_image_dims(env: &mut Environment, height: i64, width: i64) -> Result<(), String> {
     env.image_data.set_dims(Dims { rows: height, cols: width });
     Ok(())
 }
 /// Get the currently set image height.
-pub fn get_image_height(env: &mut Environment) -> Result<usize, String> {
+pub fn get_image_height(env: &mut Environment) -> Result<i64, String> {
     let &Dims { rows: height, .. } = env.image_data.get_dims();
     Ok(height)
 }
 /// Get the currently set image width.
-pub fn get_image_width(env: &mut Environment) -> Result<usize, String> {
+pub fn get_image_width(env: &mut Environment) -> Result<i64, String> {
     let &Dims { cols: width, .. } = env.image_data.get_dims();
     Ok(width)
 }
 /// Set the current pixel data for the specified row and column
-pub fn set_pixel_data(env: &mut Environment, row: usize, col: usize, value: f64)
+pub fn set_pixel_data(env: &mut Environment, row: i64, col: i64, value: f64)
         -> Result<(), String> {
     env.image_data.set(Dims::new(row, col), value);
     Ok(())
@@ -37,7 +37,7 @@ pub fn write(env: &mut Environment, filename: String) -> Result<(), String> {
     let range = extrema.range();
 
     for (x, y, pixel) in img_buf.enumerate_pixels_mut() {
-        let value = env.image_data.get(Dims::new(x as usize, y as usize));
+        let value = env.image_data.get(Dims::new(x as i64, y as i64));
 
         let alpha = (env.magnifier * value / range).powf(env.power);
         let alpha = if alpha > 1.0 { 255u8 }
@@ -52,7 +52,7 @@ pub fn write(env: &mut Environment, filename: String) -> Result<(), String> {
     Ok(())
 }
 /// Project the given pixel onto the underlying axes, using the provided center and size.
-pub fn project(env: &mut Environment, row: usize, col: usize, center: (f64, f64), size: (f64, f64))
+pub fn project(env: &mut Environment, row: i64, col: i64, center: (f64, f64), size: (f64, f64))
         -> Result<(f64, f64), String> {
     let &Dims { rows, cols } = env.image_data.get_dims();
     let re = (row as f64 / rows as f64 - 0.5) * size.0 + center.0;

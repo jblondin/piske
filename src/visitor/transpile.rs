@@ -336,9 +336,9 @@ fn postfix_to_tokens(op: &PostfixOp, left: &Node<Expression>, state: &mut State)
 impl ToTokens for Literal {
     fn to_tokens(&self, tokens: &mut Tokens) {
         match *self {
-            Literal::String(ref s) => { tokens.append(format!("\"{}\"", s)); },
-            Literal::Float(f) => { tokens.append(format!("{}", f)); },
-            Literal::Int(i) => { tokens.append(format!("{}", i)); },
+            Literal::String(ref s) => { tokens.append(format!("\"{}\".to_string()", s)); },
+            Literal::Float(f) => { tokens.append(format!("{}f64", f)); },
+            Literal::Int(i) => { tokens.append(format!("{}i64", i)); },
             Literal::Boolean(b) => { tokens.append(format!("{}", b)); },
         }
     }
@@ -351,6 +351,7 @@ extern crate psk_std;
 use psk_std::step_range::StepRange;
 use psk_std::stdlib::*;
 use psk_std::complex::Complex;
+use psk_std::Environment;
 
     "#)
 }

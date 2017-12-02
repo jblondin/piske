@@ -74,12 +74,12 @@ impl StdFuncTable {
     }
 }
 
-add_interpreter_func!(psk_set_image_dims, set_image_dims, [usize, usize], |_| Value::Empty);
+add_interpreter_func!(psk_set_image_dims, set_image_dims, [i64, i64], |_| Value::Empty);
 add_interpreter_func!(psk_get_image_height, get_image_height, [], |i| Value::Int(i as i64));
 add_interpreter_func!(psk_get_image_width, get_image_width, [], |i| Value::Int(i as i64));
-add_interpreter_func!(psk_set_pixel_data, set_pixel_data, [usize, usize, f64], |_| Value::Empty);
+add_interpreter_func!(psk_set_pixel_data, set_pixel_data, [i64, i64, f64], |_| Value::Empty);
 add_interpreter_func!(psk_write, write, [String], |_| Value::Empty);
-add_interpreter_func!(psk_project, project, [usize, usize, (f64, f64), (f64, f64)],
+add_interpreter_func!(psk_project, project, [i64, i64, (f64, f64), (f64, f64)],
     |(re, im)| Value::Complex(re, im));
 add_interpreter_func!(psk_re, re, [(f64, f64)], |f| Value::Float(f));
 add_interpreter_func!(psk_im, im, [(f64, f64)], |f| Value::Float(f));
