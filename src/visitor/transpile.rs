@@ -31,6 +31,7 @@ impl TranspileVisitor for Node<Program> {
 #pref #nl
 
 fn run() -> Result<(), String> { #nl
+    #![allow(unused_mut)]
     let mut env = Environment::default(); #nl
     #prog
     ; Ok(())
@@ -223,13 +224,33 @@ impl TranspileVisitor for Node<Expression> {
                     }
                 };
                 state.loop_depth -= 1;
-                add_cast(quote! { {
-                    let mut #loop_var_name;
-                    for #qvar in #qset { #nl #loop_var_name = { #nl #qbody }; }
-                    #loop_var_name
-                } }, annotation.borrow().ty(), annotation.borrow().promote_type())
+                match start_value(annotation.borrow().ty().unwrap()) {
+                    Some(start_value) => {
+                        add_cast(quote! { {
+                            let mut #loop_var_name = #start_value;
+                            for #qvar in #qset { #nl #loop_var_name = { #nl #qbody }; }
+                            #loop_var_name
+                        } }, annotation.borrow().ty(), annotation.borrow().promote_type())
+                    },
+                    None => {
+                        add_cast(quote! {
+                            for #qvar in #qset { #nl #qbody }
+                        }, annotation.borrow().ty(), annotation.borrow().promote_type())
+                    }
+                }
             },
         }
+    }
+}
+
+fn start_value(ty: PType) -> Option<Tokens> {
+    match ty {
+        PType::String => Some(raw("String::new()")),
+        PType::Float => Some(raw("0.0")),
+        PType::Int => Some(raw("0")),
+        PType::Boolean => Some(raw("false")),
+        PType::Complex => Some(raw("Complex::new(0.0, 0.0)")),
+        PType::Set | PType::Void => None,
     }
 }
 
