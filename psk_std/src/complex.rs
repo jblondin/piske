@@ -2,6 +2,7 @@
 use std::ops::{Add, Sub, Mul, Div, Neg};
 
 /// Complex number
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Complex {
     /// Real component of complex number
     pub re: f64,

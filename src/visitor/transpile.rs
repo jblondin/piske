@@ -31,7 +31,7 @@ impl TranspileVisitor for Node<Program> {
 #pref #nl
 
 fn run() -> Result<(), String> { #nl
-    let env = Environment::default(); #nl
+    let mut env = Environment::default(); #nl
     #prog
     ; Ok(())
 }
@@ -72,7 +72,7 @@ impl TranspileVisitor for Node<Statement> {
             (&Statement::Declare(ref ident, ref expr), _) => {
                 let rhs = expr.visit(state)?;
                 let lhs = ident.visit(state)?;
-                Ok(quote! { let #lhs = #rhs; })
+                Ok(quote! { let mut #lhs = #rhs; })
             },
             (&Statement::Assign(ref ident, ref expr), _) => {
                 let rhs = expr.visit(state)?;
