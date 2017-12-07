@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Jamie Blondin <jblondin@gmail.com>"]
 build = "build.rs"
 
+[[bin]]
+name = "piske"
+path = "src/bin/piske.rs"
+
 [build-dependencies]
 peg = { path = "../rust-peg" }
 

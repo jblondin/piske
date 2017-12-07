@@ -2,7 +2,8 @@ extern crate rustyline;
 extern crate piske;
 extern crate sindra;
 
-use std::io::Write;
+use std::io::{Read, Write};
+use std::fs::File;
 
 use rustyline::{CompletionType, Editor};
 use rustyline::completion::FilenameCompleter;
@@ -101,13 +102,49 @@ impl<O: Write, E: Write> Repl<O, E> {
 
 }
 
-fn main() {
-    let result = Repl::new(::std::io::stdout(), ::std::io::stderr()).start();
-    match result {
-        Ok(_) => { ::std::process::exit(0); },
+fn interpret_file(file_name: &str) {
+    match File::open(file_name) {
+        Ok(mut file) => {
+            let mut source = String::new();
+            match file.read_to_string(&mut source) {
+                Ok(_) => {
+                    match piske::glue::interpret(&source) {
+                        Ok(_) => {},
+                        Err(e) => {
+                            writeln!(::std::io::stderr(), "interpreting failed: {}", e).unwrap();
+                            ::std::process::exit(1);
+                        }
+                    }
+                },
+                Err(e) => {
+                    writeln!(::std::io::stderr(), "file error: {}", e).unwrap();
+                    ::std::process::exit(1);
+                }
+            }
+        },
         Err(e) => {
-            writeln!(::std::io::stderr(), "Error: {}", e).unwrap();
+            writeln!(::std::io::stderr(), "file error: {}", e).unwrap();
             ::std::process::exit(1);
         }
+    }
+}
+
+fn main() {
+    let args: Vec<String> = ::std::env::args().collect();
+    if args.len() == 1 {
+        // no file passed in, open REPL
+        let result = Repl::new(::std::io::stdout(), ::std::io::stderr()).start();
+        match result {
+            Ok(_) => { ::std::process::exit(0); },
+            Err(e) => {
+                writeln!(::std::io::stderr(), "Error: {}", e).unwrap();
+                ::std::process::exit(1);
+            }
+        }
+    } else if args.len() == 2 {
+        interpret_file(&args[1]);
+    } else {
+        writeln!(::std::io::stderr(), "Usage: {} [<file>]", args[0]).unwrap();
+        ::std::process::exit(1);
     }
 }
