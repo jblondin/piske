@@ -9,10 +9,10 @@ name = "piske"
 path = "src/bin/piske.rs"
 
 [build-dependencies]
-peg = { path = "../rust-peg" }
+wee-peg = "0.5"
 
 [dependencies]
-sindra = { path = "../sindra" }
+sindra = "0.1"
 regex = "0.2"
 lazy_static = "0.2"
 rustyline = { git = "https://github.com/kkawakam/rustyline" }
