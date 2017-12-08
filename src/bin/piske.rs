@@ -1,4 +1,4 @@
-extern crate rustyline;
+extern crate wee_rl as rustyline;
 extern crate piske;
 extern crate sindra;
 
