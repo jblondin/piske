@@ -6,6 +6,7 @@ authors = ["Jamie Blondin <jblondin@gmail.com>"]
 build = "build.rs"
 exclude = [ "mandelbrot.png" ]
 repository = "https://github.com/jblondin/piske"
+license = "MIT"
 
 [[bin]]
 name = "piske"
