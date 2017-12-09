@@ -80,8 +80,8 @@ version = "0.1.0"
 authors = ["Jamie Blondin <jblondin@gmail.com>"]
 
 [dependencies]
-psk_std = {{ path = "../piske/psk_std" }}
-image = "*"
+psk_std = "0.1"
+image = "0.18"
 "#, proj_name);
 
         try_file!(f.write_all(cargo_contents.as_bytes()), {});

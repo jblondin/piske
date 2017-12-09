@@ -87,7 +87,15 @@ $ cd test_proj_dir
 $ ls
 Cargo.toml   src
 $ cargo run
-... (TODO)
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+   ...
+   Compiling a bunch libraries
+   ...
+   Compiling psk_std v0.1.0
+   Compiling test_proj_dir v0.1.0 (file:///home/jamie/devel/piske_examples/test_proj_dir)
+    Finished dev [unoptimized + debuginfo] target(s) in 14.78 secs
+     Running `target/debug/test_proj_dir`
+8
 ```
 
 The first line translates the piske code file into a Rust project located in the specified directory. Then, the code is executed by building and running the translated code using the Rust `cargo` command.

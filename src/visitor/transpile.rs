@@ -31,7 +31,7 @@ impl TranspileVisitor for Node<Program> {
 #pref #nl
 
 fn run() -> Result<(), String> { #nl
-    #![allow(unused_mut)]
+    #![allow(unused_mut, unused_variables)]
     let mut env = Environment::default(); #nl
     #prog
     ; Ok(())
@@ -375,6 +375,8 @@ impl ToTokens for Literal {
 
 fn preface() -> Tokens {
     raw(r#"
+#![allow(unused_imports)]
+
 extern crate psk_std;
 
 use std::io::Write;
