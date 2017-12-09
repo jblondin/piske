@@ -21,7 +21,7 @@ lazy_static = "0.2"
 wee-rl = "1.0"
 clap = "2.19.0"
 quote = "0.3"
-psk_std = { path = "psk_std" }
+psk_std = "0.1"
 
 [dev-dependencies]
 tempfile = "2.2.0"
