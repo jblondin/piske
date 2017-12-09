@@ -1,7 +1,10 @@
 [package]
 name = "psk_std"
+description = "Standard library for the piske programming langauge"
 version = "0.1.0"
 authors = ["Jamie Blondin <jblondin@gmail.com>"]
+repository = "https://github.com/jblondin/piske"
+license = "MIT"
 
 [dependencies]
 image = "*"

@@ -1,8 +1,11 @@
 [package]
 name = "piske"
+description = "The piske programming langauge for generative art"
 version = "0.1.0"
 authors = ["Jamie Blondin <jblondin@gmail.com>"]
 build = "build.rs"
+exclude = [ "mandelbrot.png" ]
+repository = "https://github.com/jblondin/piske"
 
 [[bin]]
 name = "piske"
