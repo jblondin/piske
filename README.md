@@ -1,7 +1,7 @@
 # Piske
 
 [![Build Status](https://travis-ci.org/jblondin/piske.svg?branch=master)](https://travis-ci.org/jblondin/piske)
-[![Documentation](https://docs.rs/piske/badge.svg)](https://docs.rs/piske/badge.svg)
+[![Documentation](https://docs.rs/piske/badge.svg)](https://docs.rs/piske)
 
 Piske is a domain-specific programming language designed for the creation of [generative art](https://en.wikipedia.org/wiki/Generative_art). Piske's primary goal is to provide concise, easy-to-understand syntax and semantics to facilitate the generation of a wide variety of algorithmic images.
 
