@@ -1,12 +1,14 @@
-extern crate wee_rl as rustyline;
+extern crate rustyline;
 extern crate piske;
 extern crate sindra;
 
 use std::io::{Read, Write};
 use std::fs::File;
 
-use rustyline::{CompletionType, Editor};
-use rustyline::completion::FilenameCompleter;
+use rustyline::{CompletionType, Context, Editor, Helper};
+use rustyline::highlight::Highlighter;
+use rustyline::hint::Hinter;
+use rustyline::completion::{Completer, FilenameCompleter};
 use rustyline::error::ReadlineError;
 
 use sindra::scope::Scoped;
@@ -18,8 +20,27 @@ use piske::visitor::State;
 mod result { pub type Result<T> = ::std::result::Result<T, String>; }
 type Result = result::Result<()>;
 
+struct PiskeClHelper {
+    completer: FilenameCompleter,
+}
+impl Completer for PiskeClHelper {
+    type Candidate = <FilenameCompleter as Completer>::Candidate;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        ctx: &Context<'_>,
+    ) -> std::result::Result<(usize, Vec<Self::Candidate>), ReadlineError> {
+        self.completer.complete(line, pos, ctx)
+    }
+}
+impl Highlighter for PiskeClHelper {}
+impl Hinter for PiskeClHelper {}
+impl Helper for PiskeClHelper {}
+
 struct Repl<O, E> {
-    editor: Editor<FilenameCompleter>,
+    editor: Editor<PiskeClHelper>,
     cout: O,
     cerr: E,
 
@@ -45,9 +66,8 @@ impl<O: Write, E: Write> Repl<O, E> {
                     .history_ignore_space(true)
                     .completion_type(CompletionType::List)
                     .build();
-                let completer = FilenameCompleter::new();
                 let mut editor = Editor::with_config(config);
-                editor.set_completer(Some(completer));
+                editor.set_helper(Some(PiskeClHelper { completer: FilenameCompleter::new() }));
                 if editor.load_history(HISTORY_FILE).is_err() {
                     writeln!(cout, "No previous history.").expect(STDOUT_ERRSTR);
                 }
