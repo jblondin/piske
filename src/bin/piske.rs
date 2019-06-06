@@ -89,7 +89,7 @@ impl<O: Write, E: Write> Repl<O, E> {
             let line = self.editor.readline(PROMPT);
             match line {
                 Ok(line) => {
-                    self.editor.add_history_entry(line.as_ref());
+                    self.editor.add_history_entry(line.clone());
                     self.read_eval_print(&line)?;
                 },
                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
